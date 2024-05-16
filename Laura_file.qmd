@@ -1,0 +1,182 @@
+---
+title: "Strava_File"
+format: html
+---
+
+# STRAVA PROJECT 
+
+```{r}
+install.packages("XML")
+#install.packages("gitcreds")
+library("readr")
+library(sf)
+library(ggplot2)
+library(dplyr)
+library("gitcreds")
+library(XML) #to read the XML data of gpx files
+library(leaflet) #to show in a map
+
+laura_act <- read.csv("data/Laura_Strava/Laura_act.csv")
+
+#laura_act <- st_as_sf(laura_act, coords = c("E", "N"), crs = 2056)
+#nochmal nachschauen, wsl gar nicht nyötig
+
+```
+
+## Understanding GPX 
+https://www.appsilon.com/post/r-gpx-files
+GPX is a very common map data format used to store GPS data of routes. GPX is basically XML, therefore, we need to install the XML package. 
+I tracked 7 routes of mine in total, taking different forms of movement. I want to find out, which means of transport/movement I used. First, we will load the gpx files into the project: 
+
+
+```{r}
+gpx_1<- htmlTreeParse(file = "data/Laura_Strava/activities/11091356418.gpx", useInternalNodes = TRUE)
+gpx_2<- htmlTreeParse(file = "data/Laura_Strava/activities/11103101530.gpx", useInternalNodes = TRUE)
+gpx_3<- htmlTreeParse(file = "data/Laura_Strava/activities/11116616348.gpx", useInternalNodes = TRUE)
+gpx_4<- htmlTreeParse(file = "data/Laura_Strava/activities/11188517987.gpx", useInternalNodes = TRUE)
+gpx_5<- htmlTreeParse(file = "data/Laura_Strava/activities/11203431760.gpx", useInternalNodes = TRUE)
+gpx_6<- htmlTreeParse(file = "data/Laura_Strava/activities/11209427592.gpx", useInternalNodes = TRUE)
+gpx_7<- htmlTreeParse(file = "data/Laura_Strava/activities/11239313364.gpx", useInternalNodes = TRUE)
+
+gpx_files <- c("data/Laura_Strava/activities/11091356418.gpx","data/Laura_Strava/activities/11103101530.gpx", "data/Laura_Strava/activities/11116616348.gpx", "data/Laura_Strava/activities/11188517987.gpx", "data/Laura_Strava/activities/11203431760.gpx", "data/Laura_Strava/activities/11209427592.gpx", "data/Laura_Strava/activities/11239313364.gpx")
+
+
+# I am sure there is a code to run this smoothely, but I have not encountered it yet, nor the time to invest. 
+```
+
+
+```{r}
+#the coord info is in gpx file for every activity. 
+coords <- xpathSApply(doc = gpx_1, path = "//trkpt", fun = xmlAttrs) # question: if we use the same from gpx1 for all, is that a problem?
+elevation <- xpathSApply(doc = gpx_1, path = "//trkpt/ele", fun = xmlValue) # same question
+
+df <- data.frame(
+  lat = as.numeric(coords["lat", ]),
+  lon = as.numeric(coords["lon", ]),
+  elevation = as.numeric(elevation)
+)
+
+head(df, 10)
+tail(df, 10)
+
+plot(x = df$lon, y = df$lat, type = "l", col = "black", lwd = 3,
+     xlab = "Longitude", ylab = "Latitude")
+```
+###CHAT GTP idea: 
+make a df that has all the lat lon and elevation infos of all the trips, and give them a column with a unique ID per trip. 
+then this huge df can be set into one map, structured by ID. 
+therefore, I would need to add a column that has the ID 
+```{r}
+#CHAT GTP proposes this: 
+gpx_files <- list.files("data/Laura_Strava/activities", pattern = "\\.gpx$", full.names = TRUE)
+
+head(gpx_files)
+
+process_gpx <- function(file, id) {
+  doc <- xmlTreeParse(file, useInternalNodes = TRUE)
+  coords <- xpathApply(doc, "//trkpt", function(x) as.numeric(xmlAttrs(x)[c("lat", "lon")]))
+  elevation <- xpathSApply(doc, "//trkpt/ele", xmlValue)
+  df <- data.frame(
+    lat = coords[, 1],
+    lon = coords[, 2],
+    elevation = as.numeric(elevation),
+    object_id = id
+  )
+  return(df)
+}
+
+all_data <- do.call(rbind, lapply(seq_along(gpx_files), function(i) {
+  process_gpx(gpx_files[i], i)
+}))
+
+head(all_data)
+
+```
+
+
+
+## loading several files into one Map
+https://stackoverflow.com/questions/54726758/merging-multiple-gpx-files-into-a-single-gpx-file-with-multiple-tracks
+
+```{r}
+gpx_files <- c("data/Laura_Strava/activities/11091356418.gpx","data/Laura_Strava/activities/11103101530.gpx", "data/Laura_Strava/activities/11116616348.gpx", "data/Laura_Strava/activities/11188517987.gpx", "data/Laura_Strava/activities/11203431760.gpx", "data/Laura_Strava/activities/11209427592.gpx", "data/Laura_Strava/activities/11239313364.gpx")
+
+#install.packages("plotKML") library("plotKML") -- funktioniert nicht auf neuem R 
+install.packages("sf")
+library(sf)
+
+# Create empty list for storing .gpx files.
+list_gpx <- list()
+
+# Loop to read files, store in a list with name:
+for (i in seq_along(gpx_files)){
+  list_gpx[[i]] <- readGPX(gpx_files[1])
+  names(list_gpx)[[i]] <- gpx_files[i]
+}
+
+# Loop through list_gpx, get track df, clean up columns, and save in list. 
+# Empty list for tracks. 
+track_list <- list()
+
+# Loop
+for (i in 1:length(list_gpx)){
+  track_list[[i]] <- do.call(cbind,list_gpx[[i]]$tracks[[1]])[,c(1:4)]
+  if (grepl("Run",colnames(track_list[[i]]))==TRUE){
+    track_list[[i]]$activity <- rep("Run",nrow(track_list[[i]]))
+  }else{
+    track_list[[i]]$activity <- rep("Bike",nrow(track_list[[i]]))
+  }
+  names(track_list[[i]]) <- c("lon","lat","ele","time","activity")
+}
+
+# Merge dataframes in track_list.
+data <- do.call(rbind,track_list)
+
+
+```
+
+```{r}
+```
+
+
+
+
+## colouring etc
+```{r}
+library(leaflet)
+
+leaflet() %>%
+  addTiles() %>%
+  addPolylines(data = df, lat = ~lat, lng = ~lon, color = "#000000", opacity = 0.8, weight = 3)
+
+
+get_color <- function(elevation) {
+  if (elevation < 500) {
+    return("green")
+  }
+  if (elevation < 1000) {
+    return("yellow")
+  }
+  if (elevation < 1500) {
+    return("orange")
+  }
+  return("red")
+}
+
+
+
+
+# New dataset with the new variable for color
+df_color <- df %>%
+  rowwise() %>%
+  mutate(color = get_color(elevation))
+
+df_color$last_color <- dplyr::lag(df_color$color)
+
+# Map
+map <- leaflet() %>% addTiles()
+for (color in levels(as.factor(df_color$color))) {
+  map <- addPolylines(map, lat = ~lat, lng = ~lon, data = df_color[df_color$color == color | df_color$last_color == color, ], color = ~color)
+}
+map
+```

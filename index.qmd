@@ -1,22 +1,28 @@
 ---
-title: The title of your Semesterproject
-subtitle: A subtle subtitle
-author: Firstname1 Lastname1 and Firstname2 Lastname2
+title: We need a better title
+subtitle: Patterns and Trends in Environmental Data
+author: Lucia Scheele and Laura Vetter
 format:
   html:
-    code-fold: true
+    code-fold: true # makes the code in the output collapsable
 execute:
-  warning: false
-  message: false
+  warning: false # hides warnings from the generated output
+  message: false        # hides messages from the generated output
 lang: en  # switch to "de" if you write your report in german
 bibliography: bibliography.bib
 ---
 
 ```{r preprocessing}
 #| code-summary: preprocessing
-
 ``` 
 
+```{r preprocessing}
+install.packages("pacman") 
+library("pacman")
+p_install_gh("benmarwick/wordcountaddin")
+wordcountaddin::word_count("index.qmd")
+
+``` 
 
 ## Abstract
 
