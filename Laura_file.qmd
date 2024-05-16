@@ -92,45 +92,47 @@ all_data <- do.call(rbind, lapply(seq_along(gpx_files), function(i) {
 head(all_data)
 
 ```
+```{r}
+library(XML)
+
+# Create a list of all GPX file paths
+gpx_files <- list.files("data/Laura_Strava/activities", pattern = "\\.gpx$", full.names = TRUE)
+
+# Function to process a single GPX file
+process_gpx <- function(file, id) {
+  doc <- xmlTreeParse(file, useInternalNodes = TRUE)
+  
+  coords <- xpathApply(doc, "//trkpt", function(node) {
+    lat <- as.numeric(xmlValue(node["lat"]))
+    lon <- as.numeric(xmlValue(node["lon"]))
+    return(c(lat, lon))
+  })
+  
+  elevation <- xpathSApply(doc, "//trkpt/ele", xmlValue)
+  
+  df <- data.frame(
+    id = id,
+    lat = unlist(coords[1,]),
+    lon = unlist(coords[2,]),
+    elevation = as.numeric(elevation)
+  )
+  
+  return(df)
+}
+
+# Process all GPX files and combine into a single dataframe
+all_data <- do.call(rbind, lapply(seq_along(gpx_files), function(i) {
+  process_gpx(gpx_files[i], i)
+}))
+
+```
 
 
-
-## loading several files into one Map
-https://stackoverflow.com/questions/54726758/merging-multiple-gpx-files-into-a-single-gpx-file-with-multiple-tracks
+### loading several files into one Map
+https://stackoverflow.com/questions/54726758/merging-multiple-gpx-files-into-a-single-gpx-file-with-multiple-tracks --- didnt work, as old plotKML used and bc of other stuff. 
 
 ```{r}
 gpx_files <- c("data/Laura_Strava/activities/11091356418.gpx","data/Laura_Strava/activities/11103101530.gpx", "data/Laura_Strava/activities/11116616348.gpx", "data/Laura_Strava/activities/11188517987.gpx", "data/Laura_Strava/activities/11203431760.gpx", "data/Laura_Strava/activities/11209427592.gpx", "data/Laura_Strava/activities/11239313364.gpx")
-
-#install.packages("plotKML") library("plotKML") -- funktioniert nicht auf neuem R 
-install.packages("sf")
-library(sf)
-
-# Create empty list for storing .gpx files.
-list_gpx <- list()
-
-# Loop to read files, store in a list with name:
-for (i in seq_along(gpx_files)){
-  list_gpx[[i]] <- readGPX(gpx_files[1])
-  names(list_gpx)[[i]] <- gpx_files[i]
-}
-
-# Loop through list_gpx, get track df, clean up columns, and save in list. 
-# Empty list for tracks. 
-track_list <- list()
-
-# Loop
-for (i in 1:length(list_gpx)){
-  track_list[[i]] <- do.call(cbind,list_gpx[[i]]$tracks[[1]])[,c(1:4)]
-  if (grepl("Run",colnames(track_list[[i]]))==TRUE){
-    track_list[[i]]$activity <- rep("Run",nrow(track_list[[i]]))
-  }else{
-    track_list[[i]]$activity <- rep("Bike",nrow(track_list[[i]]))
-  }
-  names(track_list[[i]]) <- c("lon","lat","ele","time","activity")
-}
-
-# Merge dataframes in track_list.
-data <- do.call(rbind,track_list)
 
 
 ```
