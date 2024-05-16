@@ -12,13 +12,14 @@ Analysis Geo 880**
 
 | Semester:      | FS23                                     |
 |:---------------|:---------------------------------------- |
-| **Data:**      | What type of data are you focussing on?  |
-| **Title:**     | The title of your project                |
-| **Student 1:** | Name of Student 1                        |
-| **Student 2:** | Name of Student 2                        |
+| **Data:**      | Strava Data Project (or other, yet to be defined)  |
+| **Title:**     | We need a better title               |
+| **Student 1:** | Laura Vetter                        |
+| **Student 2:** | Lucia Scheele                        |
 
 ## Abstract 
 <!-- (50-60 words) -->
+Up to now, we just have the strava data that I uploaded, maybe you, Lucia have more ideas?
 
 ## Research Questions
 <!-- (50-60 words) -->
