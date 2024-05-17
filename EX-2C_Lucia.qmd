@@ -1,0 +1,158 @@
+---
+title: "My_GPS_tracks"
+format: html
+---
+# Ex.2C
+- Import your data as a data frame and convert it to an sf object, using the correct CRS information
+- Convert your data to CH1903+ LV95
+- Make a map of your data using ggplot2 or tmap.
+
+# Import 
+
+## Activity Data
+```{r}
+library(readr)
+library(dplyr)
+
+activity <- read_delim("strava_data/activities.csv", delim = ",")
+activity <- activity |> 
+  select(1:4)
+```
+
+## GPX Data to df
+- GPX is just a fancier version of xml, so we can recycle sml tools
+We will load the data of one GPX track as a html file, but the loaded gpx data looks pretty messy, It is thus necessary to tidy it by identifying key structures: 
+- trkpt element = contains latitude and longitude information for every point
+- ele tag = contains the elevation.
+- time = contains UTC-8 Timeinformation
+
+The html looks like this: 
+</trkpt><trkpt lat="47.2176510" lon="8.6811000"> <ele>511.9<
+/ele><time>2024-03-25T16:03:41Z<
+/time><extensions><trackpointextension><cad>0</cad></trackpointextension></extensions>
+
+```{r}
+install.packages("XML")
+library(XML)
+
+# read the GPX file of one activity
+gpx_parsed <- htmlTreeParse(file = "strava_data/activities/11039623803.gpx", useInternalNodes = TRUE)
+gpx_parsed
+
+# read out elements of the html file to vecotrs
+coords <- xpathSApply(doc = gpx_parsed, path = "//trkpt", fun = xmlAttrs)
+elevation <- xpathSApply(doc = gpx_parsed, path = "//trkpt/ele", fun = xmlValue)
+time <- xpathSApply(doc = gpx_parsed, path = "//time", fun = xmlValue)
+activity_name <- xpathSApply(doc = gpx_parsed, path = "//name", fun = xmlValue)
+# remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
+time <- time[-1]
+
+# convert vectors to a data frame
+df1 <- data.frame(
+  lat = as.numeric(coords["lat", ]),
+  lon = as.numeric(coords["lon", ]),
+  elevation = as.numeric(elevation), 
+  timestamp = as.POSIXct(time,tz="UTC", format=c("%Y-%m-%dT%H:%M:%OS")),
+  ActivityName = activity_name
+) 
+
+head(df, 10)
+tail(df, 10)
+```
+
+Create a function for this: 
+```{r}
+gpx_to_df <- function(gpx_path) {
+  
+  gpx_parsed <- htmlTreeParse(file = gpx_path, useInternalNodes = TRUE)
+  
+  # read out elements of the html file to vecotrs
+coords <- xpathSApply(doc = gpx_parsed, path = "//trkpt", fun = xmlAttrs)
+elevation <- xpathSApply(doc = gpx_parsed, path = "//trkpt/ele", fun = xmlValue)
+time <- xpathSApply(doc = gpx_parsed, path = "//time", fun = xmlValue)
+activity_name <- xpathSApply(doc = gpx_parsed, path = "//name", fun = xmlValue)
+
+
+# remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
+time <- time[-1]
+
+# convert vectors to a data frame
+df <- data.frame(
+  lat = as.numeric(coords["lat", ]),
+  lon = as.numeric(coords["lon", ]),
+  elevation = as.numeric(elevation), 
+  timestamp = as.POSIXct(time,tz="UTC", format=c("%Y-%m-%dT%H:%M:%OS")),
+  ActivityName = activity_name 
+) 
+
+dfname <- print(substring(gpx_path, 12, 34))
+
+assign(dfname, df, envir = .GlobalEnv)
+}
+```
+
+Apply function to all gpx-files from strava-folder: 
+```{r}
+# Get a list of files in the folder
+folder_path <- "strava_data/activities/"
+file_list <- list.files(folder_path, full.names = TRUE)
+
+# Iterate over each file and apply your function
+for (file_path in file_list) {
+  gpx_to_df(file_path)
+}
+```
+
+# Combine single track-files to one Dataframe
+Here I stitch the single dataframes containing the tracks' information together 
+```{r}
+#create a list of the df names
+dflist <- substring(file_list,12,34)
+
+all_tracks <- do.call(rbind, lapply(dflist, get))
+```
+
+The metadata from the 'activity' dataframe is not of any additional use. It is thus not stitched to the track data. 
+
+# Converting the df to sf object
+I convert the given dataframe to an sf-object for better handling of the spatial data. For this, the function needs an argument specifiying the columns that hold the spatial data, as well as the information as to which crs is being used. Here it is the lat/long crs, which is EPSG:4326 or WGS 84. 
+Here it is important to specify first the longitude and then the latitude, as it is the standard convention. 
+
+```{r}
+library(sf)
+all_tracks <- st_as_sf(all_tracks, coords = c("lon", "lat"), crs = 4326)
+str(all_tracks)
+```
+
+## Transforming the crs 
+We would like the CRS to be in the format of CH1903 +LV95 or EPSG:2056
+```{r}
+all_tracks <- st_transform(all_tracks, 2056)
+str(all_tracks)
+
+
+# Check Timezone
+attr(all_tracks$timestamp, "tzone")
+```
+
+## Filtering out old data
+```{r}
+library(dplyr)
+library(lubridate)
+all_tracks <- all_tracks |> 
+  mutate("year" = year(timestamp)) |> 
+  filter(year == 2024)
+```
+
+# Making a map of the data
+```{r}
+library(tmap)
+
+tmap_mode("view")
+
+  tm_shape(all_tracks)+
+  tm_dots(col = "ActivityName") 
+```
+
+
+
