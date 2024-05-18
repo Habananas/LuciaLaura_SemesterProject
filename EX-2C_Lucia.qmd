@@ -14,7 +14,7 @@ format: html
 library(readr)
 library(dplyr)
 
-activity <- read_delim("strava_data/activities.csv", delim = ",")
+activity <- read_delim("data/activities/activities.csv", delim = ",")
 activity <- activity |> 
   select(1:4)
 ```
@@ -36,7 +36,7 @@ install.packages("XML")
 library(XML)
 
 # read the GPX file of one activity
-gpx_parsed <- htmlTreeParse(file = "strava_data/activities/11039623803.gpx", useInternalNodes = TRUE)
+gpx_parsed <- htmlTreeParse(file = "data/activities_Lucia/11039623803.gpx", useInternalNodes = TRUE)
 gpx_parsed
 
 # read out elements of the html file to vecotrs
