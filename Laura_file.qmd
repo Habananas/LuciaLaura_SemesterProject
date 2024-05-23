@@ -225,9 +225,18 @@ mixed_Laura<- mixed_Laura |>
 
 mixed_Laura
 
+
+
+
+mixed_Laura <- mixed_Laura |>
+    mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
+
+
+mixed_Laura_filter <- mixed_Laura |>
+    filter(!static)
+
 tm_shape(mixed_Laura)+
   tm_dots(col = "stepMean", palette = "RdYlGn") 
-
 ```
 
 # Old Stuff (not to use)
