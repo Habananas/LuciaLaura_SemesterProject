@@ -86,12 +86,11 @@ for (file_path in file_list) {
 ```
 
 ### Combine single track-files to one Dataframe
-Here I stitch the single dataframes containing the tracks' information together 
 ```{r}
 #create a list of the df names
 file_list
 dflist_Laura <- substring(file_list,12,34)
-
+dflist_Laura
 all_tracks_Laura <- do.call(rbind, lapply(dflist_Laura, get))
 ```
 
@@ -153,21 +152,8 @@ tm_shape(all_tracks_Laura)+
 
 ```
 
-### filter by activity
+### changing activity Type
 ```{r}
- running_Laura <- all_tracks_Laura  |> 
-  filter(ActivityType == "running")
-
-bike_Laura <- all_tracks_Laura  |> 
-  filter(ActivityType == "cycling")
-
-train <- all_tracks_Laura  |> 
-  filter(ActivityType == "Canoeing")
-
-car_Laura <- all_tracks_Laura  |> 
-  filter(trajID == "2") #this one I saw from the movement pattern 
-
-#changing activity Type
 
 all_tracks_Laura <- all_tracks_Laura %>%
   mutate(ActivityType = ifelse(trajID == 2, "car", ActivityType))
@@ -181,18 +167,68 @@ all_tracks_Laura <- all_tracks_Laura %>%
 
 all_tracks_Laura <- all_tracks_Laura %>%
   mutate(ActivityType = ifelse(ActivityType == "Canoeing", "trainride", ActivityType))
+```
 
+### filter by activity Type & create new DFs with it
 
-#display activities by type
+```{r}
+ running_Laura <- all_tracks_Laura  |> 
+  filter(ActivityType == "running")
+
+bike_Laura <- all_tracks_Laura  |> 
+  filter(ActivityType == "cycling")
+
+train <- all_tracks_Laura  |> 
+  filter(ActivityType == "trainride")
+
+car_Laura <- all_tracks_Laura  |> 
+  filter(trajID == "2") #this one I saw from the movement pattern , or ActivityType == "car"
+
+mixed_Laura <- all_tracks_Laura |> 
+  filter(ActivityType=="mixed")
+```
+### display activities by type
+```{r}
 
 tm_shape(all_tracks_Laura)+
   tm_dots(col = "ActivityType", palette = "RdYlGn") 
+```
+Here, we can see the 5 different categories, of which one is "mixed", meaning walking, running, tram. 
+This one might be interesting to analyze with unsupervised learning algorithm k means. Then we can see if it works for the others as well.  
+Therefore, we need to segment by stops, then define the cluster conditions and then cluster the segments accordingly. 
 
+## Segmentation by speed 
+Use Function distance_by_element in combination with lead() and lag() to calculate euclidian distance 
+```{r}
+
+ distance_by_element <- function(later, now) {
+  as.numeric(
+    st_distance(later, now, by_element = TRUE)
+  )
+}
+
+# We want a time window of 20 seconds. As we have a point every second, we want to 
+mixed_Laura<- mixed_Laura |>
+    mutate(
+        nMinus2 = distance_by_element(lag(geometry, 10), geometry),  # distance to pos -10 sec
+        nMinus1 = distance_by_element(lag(geometry, 5), geometry),  # distance to pos -5 sec
+        nPlus1  = distance_by_element(geometry, lead(geometry, 5)), # distance to pos +5 sec
+        nPlus2  = distance_by_element(geometry, lead(geometry, 10))  # distance to pos +10 sec 
+    )
+# calculate Meanstep
+mixed_Laura<- mixed_Laura |>
+    rowwise() |>
+    mutate(
+        stepMean = mean(c(nMinus2, nMinus1, nPlus1, nPlus2))
+    ) |>
+    ungroup()
+
+mixed_Laura
+
+tm_shape(mixed_Laura)+
+  tm_dots(col = "stepMean", palette = "RdYlGn") 
 
 ```
-
-
-
 
 # Old Stuff (not to use)
 
