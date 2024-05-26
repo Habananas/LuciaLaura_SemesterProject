@@ -5,6 +5,17 @@ format: html
 
 # STRAVA PROJECT 
 
+
+____________ Abstract Lucia
+As we tried to think of possible project ideas for our semester project,
+the quality of our data and the accuracy of the given meta data
+confronted us with major limitations. As this seems to be a common
+problem for trajectory research (Sadeghian et al. 2020), we will try to
+solve this hurdle on a computational basis. Methods applied include
+segmentation, k-means clustering and similarity analysis.  
+____________ end
+
+
 ### Libraries and Files
 ```{r}
 # install.packages("XML")
@@ -18,7 +29,7 @@ library(XML) #to read the XML data of gpx files
 library(leaflet) #to show in a map
 
 laura_act <- read.csv("data/activities_Laura.csv")
-lucia_act <- read.csv("NO FILE ")
+#lucia_act <- read.csv("NO FILE ")
 ```
 
 ### Understanding GPX 
@@ -199,6 +210,8 @@ Therefore, we need to segment by stops, then define the cluster conditions and t
 
 ## Segmentation by speed 
 Use Function distance_by_element in combination with lead() and lag() to calculate euclidian distance 
+We cannot use segmentation by static, bc the mean(stepMean) is too high for the stepMean when the person is walking. So, we want to segment by speed change. When the step mean is <20 (meaning 1m/1s=3,6km/h), the category is walking 
+when the Step Mean is 20-40  it is running, and everything >40 is tram. 
 ```{r}
 
  distance_by_element <- function(later, now) {
@@ -215,6 +228,16 @@ mixed_Laura<- mixed_Laura |>
         nPlus1  = distance_by_element(geometry, lead(geometry, 5)), # distance to pos +5 sec
         nPlus2  = distance_by_element(geometry, lead(geometry, 10))  # distance to pos +10 sec 
     )
+
+
+
+mixed_Laura<- mixed_Laura |>
+    mutate(
+        nMinus2 = distance_by_element(lag(geometry, 10), geometry)/difftime(lag(geometry,10)),  # distance to pos -10 sec
+        nMinus1 = distance_by_element(lag(geometry, 5), geometry),  # distance to pos -5 sec
+        nPlus1  = distance_by_element(geometry, lead(geometry, 5)), # distance to pos +5 sec
+        nPlus2  = distance_by_element(geometry, lead(geometry, 10))  # distance to pos +10 sec 
+    )
 # calculate Meanstep
 mixed_Laura<- mixed_Laura |>
     rowwise() |>
@@ -223,20 +246,35 @@ mixed_Laura<- mixed_Laura |>
     ) |>
     ungroup()
 
-mixed_Laura
+tm_shape(mixed_Laura)+
+  tm_dots(col = "stepMean", palette = "RdYlGn") 
 
 
+#we can see that the step mean varies a lot. 
+
+
+#here, we define the categories according to the step mean 
+mixed_Laura  <- mixed_Laura  |>
+  mutate(category = case_when(
+    stepMean < 20 ~ "walking",
+    stepMean >= 20 & stepMean < 40 ~ "running", 
+    stepMean >= 40 ~ "tram"
+  ))
+
+tm_shape(mixed_Laura)+
+  tm_dots(col = "category", palette = "RdYlGn") 
 
 
 mixed_Laura <- mixed_Laura |>
     mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
-
-
-mixed_Laura_filter <- mixed_Laura |>
+summary(mixed_Laura)
+mixed_Laura_filter <- mixed_Laumedian()mixed_Laura_filter <- mixed_Laura |>
     filter(!static)
 
-tm_shape(mixed_Laura)+
+tm_shape(mixed_Laura_filter)+
   tm_dots(col = "stepMean", palette = "RdYlGn") 
+
+
 ```
 
 # Old Stuff (not to use)
