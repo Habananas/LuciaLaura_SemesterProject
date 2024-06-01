@@ -2,19 +2,27 @@
 title: "Lucias_GPS_tracks"
 format: html
 ---
-# Ex.2C
+# Data Import (as in EX.2C)
 - Import your data as a data frame and convert it to an sf object, using the correct CRS information
 - Convert your data to CH1903+ LV95
 - Make a map of your data using ggplot2 or tmap.
 
-# Import 
-
-## Activity Data
+# Libraries
 ```{r}
 library(readr)
 library(dplyr)
+library(XML)
+library(lubridate)
+library(tmap)
+```
 
-activity <- read_delim("data/activities/activities.csv", delim = ",")
+# Import 
+## Activity Data
+This may be needed later, when we want to compare the metadata from Strava with our the results from our script. 
+```{r, eval=FALSE}
+# library(readr)
+# library(dplyr)
+activity <- read_delim("data/Lucia_Strava/activities_meta.csv", delim = ",")
 activity <- activity |> 
   select(1:4)
 ```
@@ -31,12 +39,14 @@ The html looks like this:
 /ele><time>2024-03-25T16:03:41Z<
 /time><extensions><trackpointextension><cad>0</cad></trackpointextension></extensions>
 
-```{r}
-install.packages("XML")
-library(XML)
+### Example for one track 
+
+```{r, eval=FALSE}
+# install.packages("XML")
+# library(XML)
 
 # read the GPX file of one activity
-gpx_parsed <- htmlTreeParse(file = "data/activities_Lucia/11039623803.gpx", useInternalNodes = TRUE)
+gpx_parsed <- htmlTreeParse(file = "data/Lucia_Strava/activities_gpx/11039623803.gpx", useInternalNodes = TRUE)
 gpx_parsed
 
 # read out elements of the html file to vecotrs
@@ -56,12 +66,15 @@ df1 <- data.frame(
   ActivityName = activity_name
 ) 
 
-head(df, 10)
-tail(df, 10)
+head(df1, 10)
+tail(df1, 10)
 ```
 
-Create a function for this: 
+### Function
+This chunk provides a function that reads in the gpx data from Strava.
 ```{r}
+# library(XML)
+
 gpx_to_df <- function(gpx_path) {
   
   gpx_parsed <- htmlTreeParse(file = gpx_path, useInternalNodes = TRUE)
@@ -85,16 +98,17 @@ df <- data.frame(
   ActivityName = activity_name 
 ) 
 
-dfname <- print(substring(gpx_path, 12, 34))
+dfname <- print(substring(gpx_path, 34, 56))
 
 assign(dfname, df, envir = .GlobalEnv)
 }
 ```
 
-Apply function to all gpx-files from strava-folder: 
+### Apply function
+In this Chunck, the above function is applied to all gpx-files from Lucia's strava-folder: 
 ```{r}
 # Get a list of files in the folder
-folder_path <- "strava_data/activities/"
+folder_path <- "data/Lucia_Strava/activities_gpx/"
 file_list <- list.files(folder_path, full.names = TRUE)
 
 # Iterate over each file and apply your function
@@ -103,18 +117,21 @@ for (file_path in file_list) {
 }
 ```
 
-# Combine single track-files to one Dataframe
+## Create single Df
+Combine single track-files to one Dataframe
 Here I stitch the single dataframes containing the tracks' information together 
 ```{r}
 #create a list of the df names
-dflist <- substring(file_list,12,34)
+dflist <- substring(file_list,34,56)
 
 all_tracks <- do.call(rbind, lapply(dflist, get))
+
+# Delete single track files from environment
+rm(list= dflist)
+rm(dflist)
 ```
 
-The metadata from the 'activity' dataframe is not of any additional use. It is thus not stitched to the track data. 
-
-# Converting the df to sf object
+# Converting to SF Object
 I convert the given dataframe to an sf-object for better handling of the spatial data. For this, the function needs an argument specifiying the columns that hold the spatial data, as well as the information as to which crs is being used. Here it is the lat/long crs, which is EPSG:4326 or WGS 84. 
 Here it is important to specify first the longitude and then the latitude, as it is the standard convention. 
 
@@ -124,12 +141,11 @@ all_tracks <- st_as_sf(all_tracks, coords = c("lon", "lat"), crs = 4326)
 str(all_tracks)
 ```
 
-## Transforming the crs 
+## CRS Tranformation 
 We would like the CRS to be in the format of CH1903 +LV95 or EPSG:2056
 ```{r}
 all_tracks <- st_transform(all_tracks, 2056)
 str(all_tracks)
-
 
 # Check Timezone
 attr(all_tracks$timestamp, "tzone")
@@ -137,8 +153,8 @@ attr(all_tracks$timestamp, "tzone")
 
 ## Filtering out old data
 ```{r}
-library(dplyr)
-library(lubridate)
+# library(dplyr)
+# library(lubridate)
 all_tracks <- all_tracks |> 
   mutate("year" = year(timestamp)) |> 
   filter(year == 2024)
@@ -146,11 +162,10 @@ all_tracks <- all_tracks |>
 
 # Making a map of the data
 ```{r}
-library(tmap)
-
+#library(tmap)
 tmap_mode("view")
 
-  tm_shape(all_tracks)+
+tm_shape(all_tracks)+
   tm_dots(col = "ActivityName") 
 ```
 
