@@ -2,32 +2,36 @@
 title: "Lucias_GPS_tracks"
 format: html
 ---
-# Data Import (as in EX.2C)
+# 1 Data Import 
+(as in EX.2C)
 - Import your data as a data frame and convert it to an sf object, using the correct CRS information
 - Convert your data to CH1903+ LV95
 - Make a map of your data using ggplot2 or tmap.
 
-# Libraries
+## Libraries
 ```{r}
 library(readr)
 library(dplyr)
 library(XML)
+library(sf)
 library(lubridate)
 library(tmap)
+library(ggplot2)
 ```
 
-# Import 
-## Activity Data
+## a) Import LUCIA
+### Metadata
 This may be needed later, when we want to compare the metadata from Strava with our the results from our script. 
-```{r, eval=FALSE}
+```{r, eval}
 # library(readr)
 # library(dplyr)
-activity <- read_delim("data/Lucia_Strava/activities_meta.csv", delim = ",")
-activity <- activity |> 
-  select(1:4)
+act_meta_LS <- read_delim("data/Lucia_Strava/activities_meta.csv", delim = ",")
+act_meta_LS <- act_meta_LS |> 
+  select(1:4) |>  
+  filter(`Activity ID`> 11000000000)
 ```
 
-## GPX Data to df
+### GPX Data to df
 - GPX is just a fancier version of xml, so we can recycle sml tools
 We will load the data of one GPX track as a html file, but the loaded gpx data looks pretty messy, It is thus necessary to tidy it by identifying key structures: 
 - trkpt element = contains latitude and longitude information for every point
@@ -39,7 +43,7 @@ The html looks like this:
 /ele><time>2024-03-25T16:03:41Z<
 /time><extensions><trackpointextension><cad>0</cad></trackpointextension></extensions>
 
-### Example for one track 
+#### Example for one track 
 
 ```{r, eval=FALSE}
 # install.packages("XML")
@@ -70,7 +74,7 @@ head(df1, 10)
 tail(df1, 10)
 ```
 
-### Function
+#### Function
 This chunk provides a function that reads in the gpx data from Strava.
 ```{r}
 # library(XML)
@@ -84,7 +88,7 @@ coords <- xpathSApply(doc = gpx_parsed, path = "//trkpt", fun = xmlAttrs)
 elevation <- xpathSApply(doc = gpx_parsed, path = "//trkpt/ele", fun = xmlValue)
 time <- xpathSApply(doc = gpx_parsed, path = "//time", fun = xmlValue)
 activity_name <- xpathSApply(doc = gpx_parsed, path = "//name", fun = xmlValue)
-
+activity_type <- xpathSApply(doc = gpx_parsed, path = "//type", fun = xmlValue)
 
 # remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
 time <- time[-1]
@@ -95,7 +99,8 @@ df <- data.frame(
   lon = as.numeric(coords["lon", ]),
   elevation = as.numeric(elevation), 
   timestamp = as.POSIXct(time,tz="UTC", format=c("%Y-%m-%dT%H:%M:%OS")),
-  ActivityName = activity_name 
+  ActivityName = activity_name,
+  ActivityType = activity_type
 ) 
 
 dfname <- print(substring(gpx_path, 34, 56))
@@ -104,7 +109,7 @@ assign(dfname, df, envir = .GlobalEnv)
 }
 ```
 
-### Apply function
+#### Apply function
 In this Chunck, the above function is applied to all gpx-files from Lucia's strava-folder: 
 ```{r}
 # Get a list of files in the folder
@@ -117,50 +122,152 @@ for (file_path in file_list) {
 }
 ```
 
-## Create single Df
+#### Create single Df
 Combine single track-files to one Dataframe
 Here I stitch the single dataframes containing the tracks' information together 
 ```{r}
 #create a list of the df names
 dflist <- substring(file_list,34,56)
 
-all_tracks <- do.call(rbind, lapply(dflist, get))
+all_tracks_LS <- do.call(rbind, lapply(dflist, get))
 
 # Delete single track files from environment
 rm(list= dflist)
 rm(dflist)
 ```
 
-# Converting to SF Object
+### Converting to SF Object
 I convert the given dataframe to an sf-object for better handling of the spatial data. For this, the function needs an argument specifiying the columns that hold the spatial data, as well as the information as to which crs is being used. Here it is the lat/long crs, which is EPSG:4326 or WGS 84. 
 Here it is important to specify first the longitude and then the latitude, as it is the standard convention. 
 
 ```{r}
-library(sf)
-all_tracks <- st_as_sf(all_tracks, coords = c("lon", "lat"), crs = 4326)
-str(all_tracks)
+# library(sf)
+all_tracks_LS <- st_as_sf(all_tracks_LS, coords = c("lon", "lat"), crs = 4326)
+str(all_tracks_LS)
 ```
 
-## CRS Tranformation 
+#### CRS Tranformation 
 We would like the CRS to be in the format of CH1903 +LV95 or EPSG:2056
 ```{r}
-all_tracks <- st_transform(all_tracks, 2056)
-str(all_tracks)
+all_tracks_LS <- st_transform(all_tracks_LS, 2056)
+str(all_tracks_LS)
 
 # Check Timezone
-attr(all_tracks$timestamp, "tzone")
+attr(all_tracks_LS$timestamp, "tzone")
 ```
 
-## Filtering out old data
+### Filtering out old data
 ```{r}
 # library(dplyr)
 # library(lubridate)
-all_tracks <- all_tracks |> 
+all_tracks_LS <- all_tracks_LS |> 
   mutate("year" = year(timestamp)) |> 
   filter(year == 2024)
+
+# remove year from df to facilitate merging step later on
+all_tracks_LS <- all_tracks_LS |> select(1:5)
 ```
 
-# Making a map of the data
+## b) Import LAURA
+### Metadata
+```{r}
+act_meta_LV <- read.csv("data/Laura_Strava/Laura_act.csv")
+#lucia_act <- read.csv("NO FILE ")
+```
+
+### GPX to Df
+```{r}
+gpx_to_df_LV <- function(gpx_path) {
+  
+  gpx_parsed <- htmlTreeParse(file = gpx_path, useInternalNodes = TRUE)
+  
+  # read out elements of the html file to vecotrs
+coords <- xpathSApply(doc = gpx_parsed, path = "//trkpt", fun = xmlAttrs)
+elevation <- xpathSApply(doc = gpx_parsed, path = "//trkpt/ele", fun = xmlValue)
+time <- xpathSApply(doc = gpx_parsed, path = "//time", fun = xmlValue)
+activity_name <- xpathSApply(doc = gpx_parsed, path = "//name", fun = xmlValue)
+activity_type <- xpathSApply(doc = gpx_parsed, path = "//type", fun = xmlValue)
+
+# remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
+time <- time[-1]
+
+# convert vectors to a data frame
+df <- data.frame(
+  lat = as.numeric(coords["lat", ]),
+  lon = as.numeric(coords["lon", ]),
+  elevation = as.numeric(elevation), 
+  timestamp = as.POSIXct(time,tz="UTC", format=c("%Y-%m-%dT%H:%M:%OS")),
+  ActivityName = activity_name,
+  ActivityType = activity_type
+) 
+
+dfname <- print(substring(gpx_path, 31, 45))
+
+assign(dfname, df, envir = .GlobalEnv)
+}
+
+
+
+# Applying to files
+# Get a list of files in the folder
+folder_path_LV <- "data/Laura_Strava/activities/"
+file_list_LV <- list.files(folder_path_LV, full.names = TRUE)
+
+# Iterate over each file and apply your function
+for (file_path in file_list_LV) {
+  gpx_to_df_LV(file_path)
+}
+
+# Combine single track-files to one Dataframe
+
+#create a list of the df names
+dflist_LV <- substring(file_list_LV,31, 45)
+all_tracks_Laura <- do.call(rbind, lapply(dflist_LV, get))
+
+rm(list = dflist_LV)
+
+# Convert to SF-Object
+##  library(sf)
+all_tracks_Laura <- st_as_sf(all_tracks_Laura, coords = c("lon", "lat"), crs = 4326)
+str(all_tracks_Laura)
+
+### crs adaption
+all_tracks_Laura <- st_transform(all_tracks_Laura, 2056)
+str(all_tracks_Laura)
+
+# Check Timezone
+attr(all_tracks_Laura$timestamp, "tzone")
+```
+
+## c) Merge Data
+Here we merge both dataframes together. 
+To keep the information of who recorded the track, we first have to add a column which is stating our name. 
+
+```{r}
+# Create name column
+all_tracks_Laura$person <- "Laura"
+all_tracks_LS$person <- "Lucia"
+
+# merge rows
+all_tracks <- rbind(all_tracks_Laura, all_tracks_LS)
+```
+
+## d) Specify RecID
+To differentiate between the different records, I would like to assign an ID next to the name. This is also to ensure, that if there were tracks with the same name, their fixes are not combined. 
+```{r}
+# Create function
+rle_id <- function(vec) {
+    x <- rle(vec)$lengths
+    as.factor(rep(seq_along(x), times = x))
+}
+
+# Apply function to run along tracknames
+all_tracks <- all_tracks |>
+    mutate(record_id = rle_id(ActivityName))
+```
+
+# 2 Explore Data
+## Map
 ```{r}
 #library(tmap)
 tmap_mode("view")
@@ -169,5 +276,91 @@ tm_shape(all_tracks)+
   tm_dots(col = "ActivityName") 
 ```
 
+## Timelags
+```{r}
+# library(ggplot2)
+
+# Sampling frequency function
+difftime_secs <- function(later, now){
+    as.numeric(difftime(later, now, units = "secs"))
+}
+
+all_tracks <- all_tracks |> 
+  group_by(record_id) |> 
+  mutate(timelag = difftime_secs(lead(timestamp), timestamp))
+
+boxplot(all_tracks$timelag)
+summary(all_tracks$timelag)
+
+all_tracks |> 
+  ggplot(aes(timestamp, timelag)) + 
+  geom_point(aes(col= ActivityType)) +
+  facet_wrap(all_tracks$record_id)
+```
+
+As given with the strava default, gps-fixes were recorded every second. Though there were some irregularities.
+
+This visulization shows, that irregular sampling frequency is mostly occuring during the activities of canoeing, cycling and sailing (i.e. train). One record of walking also shows timelag. 
+
+We assume that these timelags where caused by weak GPS signals due to bad coverage, tunnels, ditches, etc.
+
+# 3 Movement Types
+
+The metadata on the movement type of our tracks is not very accurate, as some tracks contain several movement types. We would like to find a way of computational classification of our movement types. For this, we aim to use different movement parameters like:
+- speed (distance/time)
+- acceleration (d-speed/time)
+
+To calculate those, we will use a moving window as a smoothing algorithm. In this way we can account
+
+## Step a): Specify a temporal window 
+At this point, one could try out different temporal window specifications. I will choose a temporal window of 10 seconds around a fix and a sample of 4 distances.
+
+We need to calculate the following Euclidean distances (pos representing single location):
+  
+- pos[n-5] to pos[n]
+- pos[n-2] to pos[n]
+- pos[n] to pos[n+2]
+- pos[n] to pos[n+5]
+
+Für die Distanzrechnung nutzt man st_distance mit dem Argument by_element = T.
+Um die Unit Meter los zu werden würden wir diese Zeilen noch mit as.numeric versehen. 
+Einfacher geht es mit einer Funktion.
+
+## Step b): Measure the distance from every point to every other point within this temporal window 
+We can use the function distance_by_element from week 2 in combination with lead() and lag() to calculate the Euclidean distance. For example, to create the necessary offset of n-2, we use lag(x, 2). For each offset, we create one individual column.
+
+```{r}
+# We need to calculate the following Euclidean distances (pos representing single location):
+# Distance btw. PointsFuntion
+distance_by_element <- function(later, now){
+  as.numeric(
+    st_distance(later, now, by_element = TRUE)
+  )
+  }
+
+home <- home |> mutate(
+  nMinus5 = distance_by_element(lag(geometry, n=5), geometry), # distance to pos -5 seconds
+  nMinus2 = distance_by_element(lag(geometry, n=2), geometry), # distance to pos -2 seconds
+  nPlus2 = distance_by_element(geometry, lead(geometry, n=2)), # distance to pos +2 seconds
+  nPlus5 = distance_by_element(geometry, lead(geometry, n=5))  # distance to pos +5 seconds
+)
+
+summary(home$nMinus5)
+```
+
+Now we want to calculate the mean distance of nMinus5, nMinus2, nPlus2, nPlus5 for each row. Since we want the mean value per Row, we have to explicitly specify this before mutate() with the function rowwise(). To remove this rowwise-grouping, we end the operation with ungroup().
+
+Note that for the first two positions, we cannot calculate a stepMean since there is no Position n-2 for these positions. This is also true for the last to positions (lacking a position n+2).
+
+```{r}
+home <- home |>
+    rowwise() |>
+    mutate(
+        stepMean = mean(c(nMinus5, nMinus2, nPlus2, nPlus5))
+    ) |>
+    ungroup()
+
+home 
+```
 
 
