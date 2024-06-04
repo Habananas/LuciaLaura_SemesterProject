@@ -145,7 +145,7 @@ Here it is important to specify first the longitude and then the latitude, as it
 
 ```{r}
 # library(sf)
-all_tracks_LS <- st_as_sf(all_tracks_LS, coords = c("lon", "lat"), crs = 4326, remove = F)
+all_tracks_LS <- st_as_sf(all_tracks_LS, coords = c("lon", "lat"), crs = 4326)
 str(all_tracks_LS)
 ```
 
@@ -231,7 +231,7 @@ rm(list = dflist_LV)
 
 # Convert to SF-Object
 ##  library(sf)
-all_tracks_Laura <- st_as_sf(all_tracks_Laura, coords = c("lon", "lat"), crs = 4326, remove=F)
+all_tracks_Laura <- st_as_sf(all_tracks_Laura, coords = c("lon", "lat"), crs = 4326)
 str(all_tracks_Laura)
 
 ### crs adaption
@@ -348,21 +348,18 @@ all_tracks <- all_tracks |>
   nPlus2 = distance_by_element(geometry, lead(geometry, n=2)), # distance to pos +2 seconds
   nPlus5 = distance_by_element(geometry, lead(geometry, n=5))  # distance to pos +5 seconds
 )
-```
 
-Now we want to calculate the mean distance of nMinus5, nMinus2, nPlus2, nPlus5 for each row. Since we want the mean value per Row, we have to explicitly specify this before mutate() with the function rowwise(). To remove this rowwise-grouping, we end the operation with ungroup().
-
-Note that for the first two positions, we cannot calculate a stepMean since there is no Position n-2 for these positions. This is also true for the last to positions (lacking a position n+2).
-
-```{r}
-# Calculation of mean Euclidean distances to positions within the temporal window v
+# calculate the mean distance of nMinus5, nMinus2, nPlus2, nPlus5 for each row (positions within the temporal window)
 all_tracks <- all_tracks |>
     rowwise() |>
     mutate(
         stepMean = mean(c(nMinus5, nMinus2, nPlus2, nPlus5))
     ) |>
     ungroup()
+```
 
+Now visualization to look at stepmean: 
+```{r}
 # Exploring stepmean values: 
 all_tracks |> group_by(record_id) |> 
 summarise(mean= mean(stepMean, na.rm = T), max= max(stepMean, na.rm = T))
@@ -394,8 +391,8 @@ This way we can define a reasonable threshold value to differentiate between sto
 
 Notable here are the stepmeans of record 8 and 13, which are generally low without the outliers. For track 13, this is due to the uphill travel, which slowed down the movement-pace. Track 8 is interesting, because it has some of the largest outliers, whereas the stepmean is among the lowest when the outliers are ignored. This is most likely due to the different movement types (including their timelag outliers) and is thus exemplary for the need to split mixed-movement tracks into several segements. 
 
-To do this, I will use a threshold of 4m stepmean (= mean euclidean distance traveled within the surrounding 10 fixes).
-With a sampling frequency of 1s and a constant speed, this would account to a moving speed of 3km/h. 
+To do this, I will use a threshold of 2.5m stepmean (= mean euclidean distance traveled within the surrounding 10 fixes).
+With a sampling frequency of 1s and a constant speed, this would account to a moving speed of 4 km/h. 
 
 ### Non-/Static
 Store the new information (boolean to differentiate between stops (TRUE) and moves (FALSE)) in a new column named static.
@@ -403,12 +400,14 @@ Store the new information (boolean to differentiate between stops (TRUE) and mov
 ```{r}
 # Static Column
 all_tracks <- all_tracks |> group_by(record_id) |> 
-  mutate(static = stepMean < 2.5) 
+  mutate(static = stepMean < 2.5)
+```
 
+
+```{r}
 #Visualize segmented trajectories
-
-#   perhabs you have to extract the coordinates from all_tracks
-#   all_tracks <- cbind(all_tracks, st_coordinates(all_tracks))
+#  extract the coordinates from all_tracks
+all_tracks <- cbind(all_tracks, st_coordinates(all_tracks))
 
 dynamic_sm2.5 <- all_tracks |>
     filter(!static)
@@ -455,20 +454,32 @@ rle_id <- function(vec) {
 
 all_tracks <- all_tracks |>
   mutate(segment_id = rle_id(static))
+```
 
+Visualizing the segments
+```{r}
 # Visualize
+tmap_mode("view")
+
 rec_8 <- all_tracks |> 
   filter(record_id== 8) |>
   group_by(segment_id) 
 
-line <- st_cast(st_union(rec_8), "LINESTRING")
+rec_13 <- all_tracks |> 
+  filter(record_id== 13) |>
+  group_by(segment_id)
 
-all_tracks|>  filter(record_id== 8) |> group_by(segment_id) |>  
+line <- st_cast(st_union(rec_13), "LINESTRING")
+
+all_tracks |> group_by(segment_id) |> 
+  arrange(timestamp) |>  
+  filter(record_id== 13) |> #group_by(segment_id) |> 
   tm_shape()+
   tm_dots() +
   tm_shape(line) +
   tm_lines()
-
 ```
+
+
 
 
