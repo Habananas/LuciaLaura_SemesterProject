@@ -202,7 +202,7 @@ mixed_Laura <- all_tracks_Laura |>
 ```{r}
 
 tm_shape(all_tracks_Laura)+
-  tm_dots(col = "ActivityType", palette = "RdYlGn") 
+  tm_dots(col = "ActivityType", palette = "Paired") 
 ```
 Here, we can see the 5 different categories, of which one is "mixed", meaning walking, running, tram. 
 This one might be interesting to analyze with unsupervised learning algorithm k means. Then we can see if it works for the others as well.  
@@ -211,14 +211,34 @@ Therefore, we need to segment by stops, then define the cluster conditions and t
 ## Segmentation by speed 
 Use Function distance_by_element in combination with lead() and lag() to calculate euclidian distance 
 We cannot use segmentation by static, bc the mean(stepMean) is too high for the stepMean when the person is walking. So, we want to segment by speed change. When the step mean is <20 (meaning 1m/1s=3,6km/h), the category is walking 
-when the Step Mean is 20-40  it is running, and everything >40 is tram. 
+when the Step Mean is 20-40  it is running, and everything >40 is tram.  --- wrong thought! We first calculate the speed between two points. 
 ```{r}
-
  distance_by_element <- function(later, now) {
   as.numeric(
     st_distance(later, now, by_element = TRUE)
   )
-}
+ }
+
+#install.packages("slider")
+library(slider)
+mixed_Laura<- mixed_Laura |>
+    mutate(
+        distance  = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1 
+       time_diff = c(NA, difftime(timestamp[-1], timestamp[-length(timestamp)], units = "secs")),
+       speed= distance/time_diff,
+       speed_kmh = round(speed*3.6),
+       acceleration = (speed - lag(speed)) / time_diff,
+       avg_acc_10s = slide_dbl(acceleration, sum, .before = 5, .after = 5, .complete = TRUE) / 
+                       slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE) #aus dem package slider, berechnet die gleitende Summe der Beschleunigungswerte über 10 Punkte
+    )
+
+
+tm_shape(mixed_Laura)+
+  tm_dots(col = "speed", palette = "RdYlGn") 
+
+```
+
+```{r}
 
 # We want a time window of 20 seconds. As we have a point every second, we want to 
 mixed_Laura<- mixed_Laura |>
@@ -230,14 +250,10 @@ mixed_Laura<- mixed_Laura |>
     )
 
 
+#but this just calculates the distance by element, not by seconds! In case there was a measurement left out, we do not obtain the correct velocity data, which is the case e.g. in tunnels. Therefore we would need sth like this: (talk to lucia)
+#nMinus2 = distance_by_element(lag(geometry, 10), geometry)/difftime(lag(geometry,10)),
 
-mixed_Laura<- mixed_Laura |>
-    mutate(
-        nMinus2 = distance_by_element(lag(geometry, 10), geometry)/difftime(lag(geometry,10)),  # distance to pos -10 sec
-        nMinus1 = distance_by_element(lag(geometry, 5), geometry),  # distance to pos -5 sec
-        nPlus1  = distance_by_element(geometry, lead(geometry, 5)), # distance to pos +5 sec
-        nPlus2  = distance_by_element(geometry, lead(geometry, 10))  # distance to pos +10 sec 
-    )
+
 # calculate Meanstep
 mixed_Laura<- mixed_Laura |>
     rowwise() |>
@@ -261,19 +277,57 @@ mixed_Laura  <- mixed_Laura  |>
     stepMean >= 40 ~ "tram"
   ))
 
+# somehow this doesnt work??
+
+mixed_Laura  <- mixed_Laura  |>
+  mutate(category = case_when(
+    speed_kmh < 3.5 ~ "walking",
+    speed_kmh >= 3.5 & stepMean < 18 ~ "running", 
+    speed_kmh >= 18 ~ "tram"
+  ))
+
 tm_shape(mixed_Laura)+
   tm_dots(col = "category", palette = "RdYlGn") 
 
 
-mixed_Laura <- mixed_Laura |>
-    mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
-summary(mixed_Laura)
-mixed_Laura_filter <- mixed_Laumedian()mixed_Laura_filter <- mixed_Laura |>
+#if we want to exclude the static movements, which in this case leads to the exclusion of half of the trajectory!!! thats actually not waht we want
+#mixed_Laura <- mixed_Laura |>
+    #mutate(static = stepMean < mean(stepMean, na.rm = TRUE))
+#summary(mixed_Laura)
+
+#mixed_Laura_filter <- mixed_Laura |>
     filter(!static)
 
-tm_shape(mixed_Laura_filter)+
-  tm_dots(col = "stepMean", palette = "RdYlGn") 
+#tm_shape(mixed_Laura_filter)+
+  #tm_dots(col = "stepMean", palette = "RdYlGn") 
 
+
+```
+
+### Join with spatial data
+```{r}
+
+lines <- read_csv("taz.komm_richt_verkehr_l.csv")
+lines <- st_as_sf(lines,  wkt="geometry")
+lines <- st_set_crs(lines, 2056)
+
+
+lines_select <- lines %>%
+  select(objectid, kategorie, teilplan, geometry)
+
+plot(lines_select)
+
+tm_shape(lines_select)+
+  tm_lines(col="kategorie") +
+tm_shape(mixed_Laura)+
+  tm_dots(col="speed_kmh")
+
+joined <- st_join(mixed_Laura, lines_select, join = st_intersects)
+
+```
+
+
+```{r}
 
 ```
 
