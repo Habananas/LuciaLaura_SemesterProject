@@ -322,14 +322,65 @@ tm_shape(lines_select)+
 tm_shape(mixed_Laura)+
   tm_dots(col="speed_kmh")
 
-joined <- st_join(mixed_Laura, lines_select, join = st_intersects)
+#jetzt verbinden wir die beiden Tables, allerdings nicht mit st_intersect, weil es keine gibt, sondern neighbourhood analysis: 
+
+joined <- st_join(mixed_Laura, lines_select, 
+                  join = st_is_within_distance, 
+                       dist = 2, # Distanz in Metern
+                       left = TRUE)# damit auch werte erhalten bleiben, die nicht within distance sind
+
+# das Anreichern mit Kategorien wird aber später bei k means ein problem, weil er drop NA macht...
+
+tm_shape(lines_select)+
+  tm_lines(col="kategorie") +
+tm_shape(joined)+
+  tm_dots(col="speed_kmh")
+
 
 ```
 
-
+## erster versuch K means
 ```{r}
+mixed_select <- joined %>%
+  select(distance,speed_kmh, avg_acc_10s, kategorie)
+
+#install.packages("factoextra")
+#install.packages("cluster")
+library(factoextra)
+library(cluster)
+
+mixed_select <- na.omit(mixed_select) #otherwise fehlermeldung
+mixed_select <- st_drop_geometry(mixed_select) # necessary so geometry column goes away, otherwise fviz not work
+
+# to find the good amount of k 
+fviz_nbclust(mixed_select, kmeans, method = "wss")
+
+km <- kmeans(unlist(mixed_select), centers = 4, nstart = 25)
+
+km #hä was ist das?
+```
+
+
+
+## calculate sinuosity
+```{r}
+install.packages("trajr")
+library(trajr)
+
+coords <- st_coordinates(mixed_Laura)
+
+# Add x and y columns to the sf object
+mixed_Laura$x <- coords[,1]
+mixed_Laura$y <- coords[,2]
+
+# doesnt work. 
+
+trj <- TrajsBuild(data = "mixed_Laura", x = "x", y = "y", time = "timestamp", geometry = "geometry")
+
+sinuosity <- TrajSinuosity2(trj)
 
 ```
+
 
 # Old Stuff (not to use)
 
