@@ -12,6 +12,7 @@ lang: en  # switch to "de" if you write your report in german
 bibliography: bibliography.bib
 ---
 
+
 ```{r preprocessing}
 #| code-summary: preprocessing
 ``` 
@@ -26,11 +27,59 @@ wordcountaddin::word_count("index.qmd")
 
 ## Abstract
 
+
+BEARBEITEN!
+
 ## Introduction
+
+In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (Sadeghian et al. 2020). 
+
+In this semester project, movement data collected by two individuals over a three month period is analyzed and compared in order to understand the concepts of segmentation, similarity analysis and k-means clustering and test whether these methods can be applied to human movement data with relatively small coherence within the data sets. 
 
 @laube2011 investigate how temporal scale affects the calculation of movement parameters (speed, sinuosity and turning angle) of animal trajectories. 
 
+... leading to the research question of which travel modes can be differentiated in a collection of trajectories using  k-means clustering?
+
 ## Material and Methods
+
+
+### Data
+The data sample consists of movement data collected with the Tracking
+App Strava, by two individuals over a timespan of April - May 2024.
+Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car.For simplification of the  design and to be able to focus on the application of k-means, out of the whole sample 5 trips will be selected to be analyzed.
+Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train). 
+
+Contextual data that might be used for the analysis is traffic
+infrastructure data by the city of Zurich (
+[https://www.stadt-zuerich.ch/geodaten/](#0){.uri} ) and the TLM???
+
+BEARBEITEN
+
+### k means 
+Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using k means clustering. 
+As there are 5 different travel modes present in the 5 samples (walking, running, tram, bike, train), we will start with k=5, and eventually reduce the number of clusters if necessary. 
+
+For this, space and time of trajectories will be treated to be relative.
+The parameters for k-means will be calculated from the given geographical data and include:
+- distance p1 - p2
+- speed p1 - p2
+- acceleration p1 - p2
+- mean speed in moving window 
+- max speed in moving window
+- mean acceleration in moving window 
+- max acceleration in moving window
+- elevation change in moving window 
+- sinuosity in moving window
+(other experimental stuff like azimuth, direction, turn? how to do that?)
+
+Initially, it was planned to use a k-means algorithm  that takes categorical variables into account (such as infrastructure data), however this was not possible with the k-mode() function and the ... package was not supported by the R-version. 
+
+### classification via decision tree?
+-> If time, decision tree?? , PCA (Lucia?), 
+
+### verification
+The quality of this analysis is then  assessed by visual analysis and comparison with GIS data. 
+Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
 
 ## Results
 

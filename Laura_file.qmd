@@ -5,31 +5,22 @@ format: html
 
 # STRAVA PROJECT 
 
-
-____________ Abstract Lucia
-As we tried to think of possible project ideas for our semester project,
-the quality of our data and the accuracy of the given meta data
-confronted us with major limitations. As this seems to be a common
-problem for trajectory research (Sadeghian et al. 2020), we will try to
-solve this hurdle on a computational basis. Methods applied include
-segmentation, k-means clustering and similarity analysis.  
-____________ end
-
-
 ### Libraries and Files
 ```{r}
 # install.packages("XML")
 # install.packages("gitcreds")
 library("readr")
-library(sf)
+library(sf) #simple features 
 library(ggplot2)
 library(dplyr)
 library("gitcreds")
 library(XML) #to read the XML data of gpx files
 library(leaflet) #to show in a map
-
-laura_act <- read.csv("data/activities_Laura.csv")
-#lucia_act <- read.csv("NO FILE ")
+library(lubridate) # time
+library(knitr) #To “prove” that script runs on your machine from top to bottom
+library(slider) # for "sliding" over the datapoints (similar to leadlag or roll)
+library(factoextra)#kmeans
+library(cluster)#kmeans
 ```
 
 ### Understanding GPX 
@@ -48,32 +39,25 @@ The html looks like this:
 /time><extensions><trackpointextension><cad>0</cad></trackpointextension></extensions>
 
 
-### Data Exploration and Organisation
+### Data Loading and Organisation
 ```{r}
+laura_act <- read.csv("data/activities_Laura.csv")
 
 # Get a list of files in the folder
 folder_path <- "data/activities_Laura/"
 file_list <- list.files(folder_path, full.names = TRUE)
 
-```
-
-### Function
-Create a function that assigns coordinates, elevation, time and activity name out of the gpx file, then apply this function to all of the gpx files:
-```{r}
+#Create a function that assigns coordinates, elevation, time and activity name out of the gpx file, then apply this function to all of the gpx files:
 gpx_to_df <- function(gpx_path) {
-  
   gpx_parsed <- htmlTreeParse(file = gpx_path, useInternalNodes = TRUE)
-  
   # read out elements of the html file to vecotrs
 coords <- xpathSApply(doc = gpx_parsed, path = "//trkpt", fun = xmlAttrs)
 elevation <- xpathSApply(doc = gpx_parsed, path = "//trkpt/ele", fun = xmlValue)
 time <- xpathSApply(doc = gpx_parsed, path = "//time", fun = xmlValue)
 activity_name <- xpathSApply(doc = gpx_parsed, path = "//name", fun = xmlValue)
 activity_type <- xpathSApply(doc = gpx_parsed, path = "//type", fun = xmlValue)
-
 # remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
 time <- time[-1]
-
 # convert vectors to a data frame
 df <- data.frame(
   lat = as.numeric(coords["lat", ]),
@@ -83,9 +67,7 @@ df <- data.frame(
   ActivityName = activity_name,
   ActivityType = activity_type
 ) 
-
 dfname <- print(substring(gpx_path, 12, 34))
-
 assign(dfname, df, envir = .GlobalEnv)
 }
 
@@ -94,46 +76,32 @@ for (file_path in file_list) {
   gpx_to_df(file_path)
 }
 
-```
-
-### Combine single track-files to one Dataframe
-```{r}
-#create a list of the df names
-file_list
+# Combine single track-files to one Dataframe
 dflist_Laura <- substring(file_list,12,34)
 dflist_Laura
 all_tracks_Laura <- do.call(rbind, lapply(dflist_Laura, get))
-```
 
-
-### Converting the df to sf object
-```{r}
+# Converting the df to sf object
 library(sf)
 all_tracks_Laura <- st_as_sf(all_tracks_Laura, coords = c("lon", "lat"), crs = 4326)
 str(all_tracks_Laura)
-```
 
-### Transforming the crs & Timezone
-We would like the CRS to be in the format of CH1903 +LV95 or EPSG:2056
-```{r}
+# Transforming the crs to CH1903 +LV95 or EPSG:2056 & Timezone
 all_tracks_Laura <- st_transform(all_tracks_Laura, 2056)
 str(all_tracks_Laura)
-
 # Check Timezone
 attr(all_tracks_Laura$timestamp, "tzone")
-```
 
-
-
-###  Filtering out old data
-```{r}
-library(lubridate)
+#  Filtering out old data
 all_tracks_Laura <- all_tracks_Laura |> 
-  mutate("year" = year(timestamp)) |> 
+  mutate("year" = year(timestamp)) |> #for this use library lubridate
   filter(year == 2024)
 ```
 
-### (LAURA) Trajectories per day (so every activity that was done on a new day gets a new ID)
+### Data Exploration
+
+(LAURA)
+seperate Trajectories (so every activity that was done with a break of two hours gets a new ID)
 ```{r}
 
 all_tracks_Laura <- all_tracks_Laura %>%
@@ -162,8 +130,18 @@ tm_shape(all_tracks_Laura)+
   tm_dots(col = "trajID", palette = "RdYlGn") 
 
 ```
+we choose 3 trajectories that we want to analyze. Because we want to classify different movement types within one trajectory, we choose Traj 3 (walking, running, tram), traj 9 (bike and walking) and traj 12 (mostly bike, then stationary/walk)
+### choose 3 trajs
+```{r}
+trajIDs <- c(3, 9, 12)
 
-### changing activity Type
+laura_df <- all_tracks_Laura |> 
+  filter(trajID %in% trajIDs)
+tm_shape(laura_df)+
+  tm_dots(col = "trajID", palette = "Paired") 
+
+```
+### changing activity Type (irrelevant im moment)
 ```{r}
 
 all_tracks_Laura <- all_tracks_Laura %>%
@@ -171,6 +149,8 @@ all_tracks_Laura <- all_tracks_Laura %>%
 
 all_tracks_Laura <- all_tracks_Laura %>%
   mutate(ActivityType = ifelse(trajID == 3, "mixed", ActivityType))
+all_tracks_Laura <- all_tracks_Laura %>%
+  mutate(ActivityType = ifelse(trajID == 12, "mixed", ActivityType))
 
 
 all_tracks_Laura <- all_tracks_Laura %>%
@@ -180,7 +160,7 @@ all_tracks_Laura <- all_tracks_Laura %>%
   mutate(ActivityType = ifelse(ActivityType == "Canoeing", "trainride", ActivityType))
 ```
 
-### filter by activity Type & create new DFs with it
+### filter by activity Type & create new DFs with it (irrelevant im moment)
 
 ```{r}
  running_Laura <- all_tracks_Laura  |> 
@@ -198,7 +178,7 @@ car_Laura <- all_tracks_Laura  |>
 mixed_Laura <- all_tracks_Laura |> 
   filter(ActivityType=="mixed")
 ```
-### display activities by type
+### display activities by type(irrelevant im moment)
 ```{r}
 
 tm_shape(all_tracks_Laura)+
@@ -208,10 +188,14 @@ Here, we can see the 5 different categories, of which one is "mixed", meaning wa
 This one might be interesting to analyze with unsupervised learning algorithm k means. Then we can see if it works for the others as well.  
 Therefore, we need to segment by stops, then define the cluster conditions and then cluster the segments accordingly. 
 
-## Segmentation by speed 
-Use Function distance_by_element in combination with lead() and lag() to calculate euclidian distance 
-We cannot use segmentation by static, bc the mean(stepMean) is too high for the stepMean when the person is walking. So, we want to segment by speed change. When the step mean is <20 (meaning 1m/1s=3,6km/h), the category is walking 
-when the Step Mean is 20-40  it is running, and everything >40 is tram.  --- wrong thought! We first calculate the speed between two points. 
+
+## calculation of parameters
+we use the Function distance_by_element in combination with lead() to calculate euclidian distance from point1 to point2. Also, we calculate the time difference from poitn1 to point2, which normally should be 1 sec, but in case of signal interruption might be bigger. 
+Then, we can calculate the speed by distance/time difference, the acceleration per point. 
+Then, we apply the moving window filter, with two windows, one of 10 seconds and one of 60 seconds. (BEGRUENDUNG: mit einem kleineren Window können wir die 
+
+
+the means and maxs of it
 ```{r}
  distance_by_element <- function(later, now) {
   as.numeric(
@@ -221,23 +205,46 @@ when the Step Mean is 20-40  it is running, and everything >40 is tram.  --- wro
 
 #install.packages("slider")
 library(slider)
-mixed_Laura<- mixed_Laura |>
-    mutate(
-        distance  = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1 
-       time_diff = c(NA, difftime(timestamp[-1], timestamp[-length(timestamp)], units = "secs")),
-       speed= distance/time_diff,
-       speed_kmh = round(speed*3.6),
-       acceleration = (speed - lag(speed)) / time_diff,
-       avg_acc_10s = slide_dbl(acceleration, sum, .before = 5, .after = 5, .complete = TRUE) / 
-                       slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE) #aus dem package slider, berechnet die gleitende Summe der Beschleunigungswerte über 10 Punkte
-    )
+
+laura_df <- laura_df |> 
+  group_by(trajID) |>  # Gruppieren nach trajID
+  mutate(
+     distance = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1
+    time_diff = c(NA, difftime(timestamp[-1], timestamp[-length(timestamp)], units = "secs")),
+    speed = distance / time_diff,
+    speed_kmh = speed * 3.6, # round ist hier vllt sinnvoll? round(speed*3.6)
+    acceleration = (speed - lag(speed)) / time_diff,
+    # aus dem package slider, berechnet die gleitende Summe der Werte über 10 Punkte
+    avg_speed_10s = slide_dbl(speed_kmh, sum, .before = 5, .after = 5, .complete = TRUE) /
+      slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE),
+    avg_speed_60s = slide_dbl(speed_kmh, sum, .before = 30, .after = 30, .complete = TRUE) /
+      slide_dbl(time_diff, sum, .before = 30, .after = 30, .complete = TRUE), 
+    # aufpassen! Hier gehen die ersten 60 Datenpunkte verloren!
+        max_speed_10s = slide_dbl(speed_kmh, max, .before = 5, .after = 5, .complete = TRUE),
+    avg_acc_10s = slide_dbl(acceleration, sum, .before = 5, .after = 5, .complete = TRUE) /
+      slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE),
+    avg_acc_60s = slide_dbl(acceleration, sum, .before = 30, .after = 30, .complete = TRUE) /
+      slide_dbl(time_diff, sum, .before = 30, .after = 30, .complete = TRUE),
+     max_acc_10s = slide_dbl(acceleration, max, .before = 5, .after = 5, .complete = TRUE),
+    el_change = (elevation -lag(elevation,  10)) #given in meters/10 datapooints. Not sure if correct?
+    
+  ) |> 
+  ungroup()
 
 
-tm_shape(mixed_Laura)+
-  tm_dots(col = "speed", palette = "RdYlGn") 
+#problem if all trajectories are in one table and you calculate distance/speed etc after that the last and first point is always wrongly calculated. Therefore, these outliers are removed:
+#laura_df <- laura_df %>%
+ # filter(distance <= 1000)
+
+#also doesnt make sense, bc then all other values are wrongly calculated anyway. So - not all in one table but seperately? No, just group and ungroup (is already applied above)
+
+tm_shape(laura_df)+
+  tm_dots(col = "el_change", palette = "RdYlGn") 
+
 
 ```
 
+### step mean stuff
 ```{r}
 
 # We want a time window of 20 seconds. As we have a point every second, we want to 
@@ -282,8 +289,8 @@ mixed_Laura  <- mixed_Laura  |>
 mixed_Laura  <- mixed_Laura  |>
   mutate(category = case_when(
     speed_kmh < 3.5 ~ "walking",
-    speed_kmh >= 3.5 & stepMean < 18 ~ "running", 
-    speed_kmh >= 18 ~ "tram"
+    speed_kmh >= 3.5 & speed_kmh < 18 ~ "running", 
+    speed_kmh >= 20 ~ "tram"
   ))
 
 tm_shape(mixed_Laura)+
@@ -303,14 +310,19 @@ tm_shape(mixed_Laura)+
 
 
 ```
+We cannot use segmentation by static, bc the mean(stepMean) is too high for the stepMean when the person is walking. So, we want to segment by speed change. When the step mean is <20 (meaning 1m/1s=3,6km/h), the category is walking 
+when the Step Mean is 20-40  it is running, and everything >40 is tram.  --- wrong thought! We first calculate the speed between two points. 
+
+
 
 ### Join with spatial data
 ```{r}
 
-lines <- read_csv("taz.komm_richt_verkehr_l.csv")
+lines <- read_csv("data/taz.komm_richt_verkehr_l.csv")
 lines <- st_as_sf(lines,  wkt="geometry")
 lines <- st_set_crs(lines, 2056)
 
+tram_lines <- read_csv("data/2024_vbz_transit/shapes.txt")
 
 lines_select <- lines %>%
   select(objectid, kategorie, teilplan, geometry)
@@ -326,10 +338,10 @@ tm_shape(mixed_Laura)+
 
 joined <- st_join(mixed_Laura, lines_select, 
                   join = st_is_within_distance, 
-                       dist = 2, # Distanz in Metern
-                       left = TRUE)# damit auch werte erhalten bleiben, die nicht within distance sind
+                       dist = 15, # Distanz in Metern
+                       left = TRUE)# damit auch werte erhalten bleiben, die nicht within distance sind 
 
-# das Anreichern mit Kategorien wird aber später bei k means ein problem, weil er drop NA macht...
+# das Anreichern mit Kategorien wird aber später bei k means ein problem, weil er drop NA macht... daher dist=15 anstatt dist=0.5
 
 tm_shape(lines_select)+
   tm_lines(col="kategorie") +
@@ -341,23 +353,87 @@ tm_shape(joined)+
 
 ## erster versuch K means
 ```{r}
-mixed_select <- joined %>%
-  select(distance,speed_kmh, avg_acc_10s, kategorie)
 
 #install.packages("factoextra")
 #install.packages("cluster")
 library(factoextra)
 library(cluster)
 
-mixed_select <- na.omit(mixed_select) #otherwise fehlermeldung
-mixed_select <- st_drop_geometry(mixed_select) # necessary so geometry column goes away, otherwise fviz not work
+#mixed_select <- joined %>%
+ # select(distance,speed_kmh, avg_acc_10s, kategorie)
+#mixed_select <- st_drop_geometry(mixed_select) # necessary so geometry column goes away, otherwise fviz not work
+##mixed_select <- na.omit(mixed_select) #otherwise fehlermeldung
+
+#versuch mit nur numerischen Daten
+#plötzlich funktioniert select nicht mehr? This error occurs when you attempt to use the select() function from the dplyr package in R but also have the MASS package loaded. then use dyplr::select()
+
+laura_kmeans <- laura_df |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
+laura_kmeans <- na.omit(laura_kmeans) #otherwise fehlermeldung. Wichtig, erst NA omit, dann  drop geometry, damit später wieder zusammenführbar!
+laura_kmeans_no_geom <- st_drop_geometry(laura_kmeans) # necessary so geometry column goes away, otherwise fviz not work
 
 # to find the good amount of k 
-fviz_nbclust(mixed_select, kmeans, method = "wss")
+fviz_nbclust(laura_kmeans_no_geom, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
 
-km <- kmeans(unlist(mixed_select), centers = 4, nstart = 25)
+#make this example reproducible
+set.seed(1)
+#apply k means 
+km <- kmeans(laura_kmeans_no_geom, centers = 5, nstart = 25)
+km
+# nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
 
-km #hä was ist das?
+fviz_cluster(km, data = laura_kmeans_no_geom)
+
+laura_kmeans<- cbind(laura_kmeans, cluster = km$cluster) #achtung, habe hier das kmeans MIT gemoetrie verwendet, und bin mir nicht sicher, ob es die Cluster dann in der richtigen Reihenfolge anordnet!
+
+tm_shape(laura_kmeans)+
+  tm_dots(col = "cluster", palette = "RdYlGn") 
+#das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. Und Strassenbahn und Fahrrad sind ebenfalls gleich
+
+```
+k means kann nicht gut mit nicht numerischen (also zB kategorie) Darten umgehen.
+
+K-Modes: Ein Algorithmus, der speziell für kategorische Daten entwickelt wurde. Er verwendet die Hamming-Distanz oder andere Distanzmetriken für kategorische Daten.
+Diesen könnten wir verwenden. 
+
+## kmeans with modes
+
+```{r}
+install.packages("klaR")
+library(klaR)
+
+mixed_select$kategorie <- as.factor(mixed_select$kategorie)
+set.seed(123) # Für Reproduzierbarkeit
+km_res <- kmodes(mixed_select, modes = 3) # Anzahl der Cluster festlegen
+
+cluster_assignments <- km_res$cluster
+
+ggplot(df, aes(x = distance, y = speed_kmh, color = factor(cluster_assignments))) +
+  geom_point() +
+  facet_wrap(~kategorie)
+```
+
+
+## Sinuosity var Nils
+
+```{r}
+ distance_by_element <- function(later, now) {
+  as.numeric(
+    st_distance(later, now, by_element = TRUE)
+  )
+ }
+
+library(zoo)
+
+
+mixed_Laura |> 
+  mutate(
+    direct = distance_by_element(lag(geometry,10), lead(geometry,10)),
+    sinu = rollsum(distance, 10,align = "center", fill = NA)
+  ) |> View()
+
+?rollsum
+  
 ```
 
 
