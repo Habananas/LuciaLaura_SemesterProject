@@ -8,18 +8,25 @@ knitr::spin("preprocessing.R")
 #from the package knitr (you might need to install this first). 
 #Push the resulting files (preprocessing.html / preprocessing.md) to GitHub (this is a hard requirement).###
 
+# install.packages("XML")
+# install.packages("gitcreds")
 library("readr")
 library(sf) #simple features 
 library(ggplot2)
 library(dplyr)
 library("gitcreds")
 library(XML) #to read the XML data of gpx files
-library(leaflet) #to show in a map
+library(tmap) #to show data in map viewer
+#library(leaflet) #alternative to show in a map
 library(lubridate) # time
 library(knitr) #To “prove” that script runs on your machine from top to bottom
+#install.packages("slider")
 library(slider) # for "sliding" over the datapoints (similar to leadlag or roll)
+#install.packages("factoextra")
+#install.packages("cluster")
 library(factoextra)#kmeans
 library(cluster)#kmeans
+library(zoo) # for sinuosity
 
 ### Data Loading and Organisation
 laura_act <- read.csv("data/activities_Laura.csv")
@@ -79,34 +86,45 @@ all_tracks_Laura <- all_tracks_Laura |>
   filter(year == 2024)
 
 
+
+# choose 3 exemplary trajectories
+trajIDs <- c(3, 9, 12)
+
+laura_df <- all_tracks_Laura |> 
+  filter(trajID %in% trajIDs)
+tm_shape(laura_df)+
+  tm_dots(col = "trajID", palette = "Paired") 
+
+# calculate the parameters
+
 distance_by_element <- function(later, now) {
   as.numeric(
     st_distance(later, now, by_element = TRUE)
   )
 }
-
-
-
 laura_df <- laura_df |> 
   group_by(trajID) |>  # Gruppieren nach trajID
   mutate(
     distance = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1
-    time_diff = c(NA, difftime(timestamp[-1], timestamp[-length(timestamp)], units = "secs")),
+    time_diff = as.numeric(timestamp - lag(timestamp)),
     speed = distance / time_diff,
     speed_kmh = speed * 3.6, # round ist hier vllt sinnvoll? round(speed*3.6)
     acceleration = (speed - lag(speed)) / time_diff,
     # aus dem package slider, berechnet die gleitende Summe der Werte über 10 Punkte
-    avg_speed_10s = slide_dbl(speed_kmh, sum, .before = 5, .after = 5, .complete = TRUE) /
-      slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE),
-    avg_speed_60s = slide_dbl(speed_kmh, sum, .before = 30, .after = 30, .complete = TRUE) /
-      slide_dbl(time_diff, sum, .before = 30, .after = 30, .complete = TRUE), 
+    avg_speed_10s = slide_dbl(speed_kmh, mean, .before = 5, .after = 5, .complete = TRUE),
+    avg_speed_60s = slide_dbl(speed_kmh, mean, .before = 30, .after = 30, .complete = TRUE), 
     # aufpassen! Hier gehen die ersten 60 Datenpunkte verloren!
     max_speed_10s = slide_dbl(speed_kmh, max, .before = 5, .after = 5, .complete = TRUE),
-    avg_acc_10s = slide_dbl(acceleration, sum, .before = 5, .after = 5, .complete = TRUE) /
-      slide_dbl(time_diff, sum, .before = 5, .after = 5, .complete = TRUE),
-    avg_acc_60s = slide_dbl(acceleration, sum, .before = 30, .after = 30, .complete = TRUE) /
-      slide_dbl(time_diff, sum, .before = 30, .after = 30, .complete = TRUE),
+    avg_acc_10s = slide_dbl(acceleration, mean, .before = 5, .after = 5, .complete = TRUE) ,
+    avg_acc_60s = slide_dbl(acceleration, mean, .before = 30, .after = 30, .complete = TRUE),
     max_acc_10s = slide_dbl(acceleration, max, .before = 5, .after = 5, .complete = TRUE),
-    el_change = (elevation -lag(elevation,  10)) #given in meters/10 datapooints, not sure if correct or makes sense!
+    el_change = (elevation -lag(elevation,  10)), #given in meters/10 datapooints, not sure if correct or makes sense!
+    d_direct10 = distance_by_element(lag(geometry,5), lead(geometry,5)),
+    d_sinu10 = rollsum(distance, 10,align = "center", fill = NA), # function rollsum does basically the same as slide, was recommended by nils
+    sinuosity = d_sinu10/d_direct10 #here, some values are below 1, which does not make sense. Why could this be?? And others are higher than 22, which is also weird, but can be traced back to the stops that are not yet filtered out. (is a step we should still do)
   ) |> 
   ungroup()
+
+
+
+

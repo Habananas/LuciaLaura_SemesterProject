@@ -83,6 +83,56 @@ Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
 
 ## Results
 
+### parameters
+
+```{r}
+tm_shape(laura_df)+
+  tm_dots(col = "speed_kmh", palette = "RdYlGn") 
+
+tm_shape(laura_df)+
+  tm_dots(col = "el_change", palette = "RdYlGn") 
+
+
+tm_shape(laura_df)+
+  tm_dots(col = "sinuosity", palette = "RdYlGn",
+          n =3 ,
+          breaks = seq(0, 3, by = 0.1)) 
+```
+
+### applying k means  (non hierarchical clustering)
+
+```{r}
+plot_k
+
+```
+The optimal number of clusters with the given parameters seems to be  5, when not taking in sinuosity, and 4 with sinuosity.
+```{r}
+km25
+
+plot_cluster25_5
+
+tm_shape(laura_kmeans)+
+  tm_dots(col = "cluster_25_5", palette = "RdYlGn") 
+
+```
+Changing the nstart value to 50
+```{r}
+km50
+#fehlt noch
+```
+
+Changing the cluster number to 4?
+```{r}
+km25_4
+
+```
+
+das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. Und Strassenbahn und Fahrrad sind ebenfalls gleich
+
+
+### hierarchical clustering 
+meaning that e.g. cluster bike is closer to running and tram is closer to train 
+
 ## Discussion
 
 ## Appendix
