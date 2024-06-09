@@ -1,3 +1,5 @@
+
+```{r}
 #Including all your code index.qmd and rendering it each time you want to preview your report makes your report less error prone and more reproducible, 
 #but this workflow can be cumbersome when the code takes a long time to execute. 
 #This prevents you iterating fast when writing up your report. We suggest the following method to solve this:
@@ -55,10 +57,8 @@ gpx_to_df <- function(gpx_path) {
     ActivityName = activity_name,
     ActivityType = activity_type
   ) 
-  
-  dfname <- print(substring(gpx_path, 17, 34)) #extract trajectory names
-  df$rec_id <- dfname #add column with traj-name to df
-  assign(dfname, df, envir = .GlobalEnv) # add traj-name to df
+  dfname <- print(substring(gpx_path, 12, 34))
+  assign(dfname, df, envir = .GlobalEnv)
 }
 
 # Iterate over each file and apply your function
@@ -67,12 +67,9 @@ for (file_path in file_list) {
 }
 
 # Combine single track-files to one Dataframe
-dflist_Laura <- substring(file_list,17,34)
+dflist_Laura <- substring(file_list,12,34)
 dflist_Laura
 all_tracks_Laura <- do.call(rbind, lapply(dflist_Laura, get))
-
-# Delete single track files from environment
-rm(list= dflist_Laura)
 
 # Converting the df to sf object
 library(sf)
@@ -90,34 +87,21 @@ all_tracks_Laura <- all_tracks_Laura |>
   mutate("year" = year(timestamp)) |> #for this use library lubridate
   filter(year == 2024)
 
-# Specify TRajID --> To differentiate between the different records, I would like to assign an ID next to the name. This is also to ensure, that if there were tracks with the same name, their fixes are not combined. 
-## Create function
-rle_id <- function(vec) {
-  x <- rle(vec)$lengths
-  as.factor(rep(seq_along(x), times = x))
-}
-## Apply function to run along record_names
-all_tracks_Laura <- all_tracks_Laura |>
-  mutate(trajID = rle_id(rec_id))
-
-# choose 3 exemplary trajectories (of mixed movement?)
+# choose 3 exemplary trajectories
 trajIDs <- c(3, 9, 12)
 
 laura_df <- all_tracks_Laura |> 
   filter(trajID %in% trajIDs)
-
 tm_shape(laura_df)+
   tm_dots(col = "trajID", palette = "Paired") 
 
-#### calculate the parameters ####
+# calculate the parameters
 
-# Distanz FUnktion
 distance_by_element <- function(later, now) {
   as.numeric(
     st_distance(later, now, by_element = TRUE)
   )
 }
-# Movement Parameter
 laura_df <- laura_df |> 
   group_by(trajID) |>  # Gruppieren nach trajID
   mutate(
@@ -140,7 +124,5 @@ laura_df <- laura_df |>
     sinuosity = d_sinu10/d_direct10 #here, some values are below 1, which does not make sense. Why could this be?? And others are higher than 22, which is also weird, but can be traced back to the stops that are not yet filtered out. (is a step we should still do)
   ) |> 
   ungroup()
-
-
-
+```
 

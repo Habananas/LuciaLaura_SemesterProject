@@ -480,6 +480,164 @@ all_tracks |> group_by(segment_id) |>
   tm_lines()
 ```
 
+# 4 K-means analysis (by laura)
+Use preprocessing file to prep data
+## erster versuch K means
+```{r}
+#mixed_select <- joined %>%
+ # select(distance,speed_kmh, avg_acc_10s, kategorie)
+#mixed_select <- st_drop_geometry(mixed_select) # necessary so geometry column goes away, otherwise fviz not work
+##mixed_select <- na.omit(mixed_select) #otherwise fehlermeldung
+
+#versuch mit nur numerischen Daten
+#plötzlich funktioniert select nicht mehr? This error occurs when you attempt to use the select() function from the dplyr package in R but also have the MASS package loaded. then use dyplr::select()
+
+laura_kmeans <- laura_df |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) |> 
+  filter(speed>0) |> 
+  filter(d_direct10>0)
+
+laura_kmeans <- na.omit(laura_kmeans) #otherwise fehlermeldung. Wichtig, erst NA omit, dann  drop geometry, damit später wieder zusammenführbar!
+laura_kmeans_no_geom <- st_drop_geometry(laura_kmeans) # necessary so geometry column goes away, otherwise fviz not work
+
+# to find the good amount of k 
+plot_k <- fviz_nbclust(laura_kmeans_no_geom, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
+#interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
+```
+
+Reproducible k-means example
+```{r}
+#make this example reproducible, to create random numbers that can be reproduced (was given in code, dont know why)
+set.seed(1)
+
+#apply k means 
+km <- kmeans(laura_kmeans_no_geom, 5)
+km25 <- kmeans(laura_kmeans_no_geom, centers = 5, nstart = 25)
+
+# nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
+
+plot_cluster25_5 <- fviz_cluster(km25, data = laura_kmeans_no_geom)
+
+laura_kmeans<- cbind(laura_kmeans, cluster25_5 = km25$cluster) #achtung, habe hier das kmeans MIT gemoetrie verwendet, und bin mir nicht sicher, ob es die Cluster dann in der richtigen Reihenfolge anordnet!
+
+tm_shape(laura_kmeans)+
+  tm_dots(col = "cluster25_5", palette = "RdYlGn") 
+#das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. Und Strassenbahn und Fahrrad sind ebenfalls gleich
+
+```
+
+Changing the nstart value to 50
+```{r}
+
+km50 <- kmeans(laura_kmeans_no_geom, centers = 5, nstart = 50)
+km50
+```
+
+Changing the cluster number to 4?
+```{r}
+
+km25_4 <- kmeans(laura_kmeans_no_geom, centers = 4, nstart = 25)
+km25_4
+```
+
+k means kann nicht gut mit nicht numerischen (also zB kategorie) Darten umgehen.
+
+K-Modes: Ein Algorithmus, der speziell für kategorische Daten entwickelt wurde. Er verwendet die Hamming-Distanz oder andere Distanzmetriken für kategorische Daten.
+Diesen könnten wir verwenden. 
+
+## kmeans with modes
+
+```{r}
+install.packages("klaR")
+library(klaR)
+
+mixed_select$kategorie <- as.factor(mixed_select$kategorie)
+set.seed(123) # Für Reproduzierbarkeit
+km_res <- kmodes(mixed_select, modes = 3) # Anzahl der Cluster festlegen
+
+cluster_assignments <- km_res$cluster
+
+ggplot(df, aes(x = distance, y = speed_kmh, color = factor(cluster_assignments))) +
+  geom_point() +
+  facet_wrap(~kategorie)
+```
+
+# Lucia k-means
+selecting columns
+```{r}
+# without direct & dsinu
+laura_kmeans_1 <- laura_df |> 
+  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, sinuosity) |> 
+  filter(speed>0) |> 
+  na.omit() |> 
+  st_drop_geometry()
+
+# add. rm elevation change
+laura_kmeans_2 <- laura_df |> 
+  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, sinuosity) |> 
+  filter(speed>0) |> 
+  na.omit() |> 
+  st_drop_geometry()
+```
+
+## k-means partitioning
+```{r}
+install.packages("vegan")
+library(vegan)
+
+# k-means partitioning, 2 to 5 groups
+KM.cascade_1 <- cascadeKM(laura_kmeans_no_geom_1,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
+summary(KM.cascade)
+KM.cascade$results
+KM.cascade$partition
+# k-means visualisation
+plot(KM.cascade_1, sortg = TRUE)
+
+# no elevation
+KM.cascade_2 <- cascadeKM(laura_kmeans_2,  inf.gr = 2, sup.gr = 5, iter = 1000, criterion = "ssi")
+plot(KM.cascade_1, sortg = TRUE)
+
+```
+
+#Hierachial Clusteranalyse
+
+Chat-GPT advice: Use hclust
+
+# Standardize the characteristics (speed and acceleration)
+```{r}
+install.packages("factoextra")
+library(factoextra)
+
+no_geom_scaled <- laura_kmeans_no_geom %>%
+  scale()
+
+# Compute the distance matrix
+dist_matrix <- dist(no_geom_scaled)
+
+# Perform hierarchical clustering
+hc <- hclust(dist_matrix, method = "complete")
+
+# Cut the tree into a desired number of clusters (e.g., 5 clusters)
+clusters <- cutree(hc, k = 5)
+
+# Add the clusters to the original data frame
+laura_kmeans_no_geom<- as.factor(clusters)
+
+# Print the data with cluster assignments
+print(laura_kmeans_no_geom)
+
+# Optionally, visualize the clusters if coordinates are available
+ggplot(data, aes(x = x, y = y, color = cluster)) +
+  geom_point(size = 3) +
+  labs(title = "Hierarchical Clustering of Point Observations",
+       x = "X Coordinate", y = "Y Coordinate") +
+  theme_minimal()
+
+# Visualize the hierarchical clustering dendrogram
+fviz_dend(hc, k = 3, rect = TRUE, rect_fill = TRUE,
+          show_labels = FALSE, main = "Dendrogram of Hierarchical Clustering")
 
 
+
+```
 

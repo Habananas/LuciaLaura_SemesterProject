@@ -46,7 +46,7 @@ In this semester project, movement data collected by two individuals over a thre
 ### Data
 The data sample consists of movement data collected with the Tracking
 App Strava, by two individuals over a timespan of April - May 2024.
-Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car.For simplification of the  design and to be able to focus on the application of k-means, out of the whole sample 5 trips will be selected to be analyzed.
+Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of k-means, a sample of 5 trips will be selected to be analyzed.
 Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train). 
 
 Contextual data that might be used for the analysis is traffic
@@ -59,7 +59,7 @@ BEARBEITEN
 Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using k means clustering. 
 As there are 5 different travel modes present in the 5 samples (walking, running, tram, bike, train), we will start with k=5, and eventually reduce the number of clusters if necessary. 
 
-For this, space and time of trajectories will be treated to be relative.
+For this, space and time of trajectories will be treated to be relative .
 The parameters for k-means will be calculated from the given geographical data and include:
 - distance p1 - p2
 - speed p1 - p2

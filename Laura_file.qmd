@@ -120,6 +120,9 @@ tm_shape(all_tracks_Laura)+
 ```
 we choose 3 trajectories that we want to analyze. Because we want to classify different movement types within one trajectory, we choose Traj 3 (walking, running, tram), traj 9 (bike and walking) and traj 12 (mostly bike, then stationary/walk)
 ### choose 3 trajs
+
+?? wofür die visualisierung und bekommst du die hin ohne das trajID von 1-14 angezeigt werdeN???
+
 ```{r}
 trajIDs <- c(3, 9, 12)
 
@@ -366,7 +369,6 @@ laura_kmeans_no_geom <- st_drop_geometry(laura_kmeans) # necessary so geometry c
 # to find the good amount of k 
 plot_k <- fviz_nbclust(laura_kmeans_no_geom, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
 #interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
-
 
 #make this example reproducible, to create random numbers that can be reproduced (was given in code, dont know why)
 set.seed(1)
