@@ -493,9 +493,9 @@ Use preprocessing file to prep data
 #plötzlich funktioniert select nicht mehr? This error occurs when you attempt to use the select() function from the dplyr package in R but also have the MASS package loaded. then use dyplr::select()
 
 laura_kmeans <- laura_df |> 
-  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) |> 
-  filter(speed>0) |> 
-  filter(d_direct10>0)
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) # |> 
+  #filter(speed>0) |> 
+  #filter(d_direct10>0)
 
 laura_kmeans <- na.omit(laura_kmeans) #otherwise fehlermeldung. Wichtig, erst NA omit, dann  drop geometry, damit später wieder zusammenführbar!
 laura_kmeans_no_geom <- st_drop_geometry(laura_kmeans) # necessary so geometry column goes away, otherwise fviz not work
@@ -565,6 +565,8 @@ ggplot(df, aes(x = distance, y = speed_kmh, color = factor(cluster_assignments))
 # Lucia k-means
 selecting columns
 ```{r}
+set.seed(1)
+
 # without direct & dsinu
 laura_kmeans_1 <- laura_df |> 
   select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, sinuosity) |> 
@@ -582,8 +584,10 @@ laura_kmeans_2 <- laura_df |>
 
 ## k-means partitioning
 ```{r}
-install.packages("vegan")
+#install.packages("vegan")
 library(vegan)
+
+set.seed(1)
 
 # k-means partitioning, 2 to 5 groups
 KM.cascade_1 <- cascadeKM(laura_kmeans_no_geom_1,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
@@ -599,45 +603,110 @@ plot(KM.cascade_1, sortg = TRUE)
 
 ```
 
-#Hierachial Clusteranalyse
+# Hierachial Clusteranalyse
 
 Chat-GPT advice: Use hclust
 
-# Standardize the characteristics (speed and acceleration)
+## Prep the data (as Laura did)
 ```{r}
-install.packages("factoextra")
-library(factoextra)
+laura_na_omit <- na.omit(laura_df) #otherwise fehlermeldung. Wichtig, erst NA omit, dann selection und drop geometry, damit später wieder zusammenführbar!
 
-no_geom_scaled <- laura_kmeans_no_geom %>%
+laura_km <- laura_na_omit |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) # |> 
+  #filter(speed>0) |> 
+  #filter(d_direct10>0)
+laura_km <- st_drop_geometry(laura_km) # necessary so geometry column goes away, otherwise fviz not work
+
+
+#Scaling to 0-1 values, to ensure that all factor have equal impact
+no_geom_scaled <- laura_km %>%
   scale()
+```
 
+## hclust
+From the help page: 
+"different clustering methods:    
+  - Ward's minimum variance method 
+  aims at finding compact, spherical clusters. 
+  - complete linkage method 
+  finds similar clusters
+  - single linkage method 
+  (closely related to the minimal spanning tree) 
+  adopts a ‘friends of friends’ clustering strategy. 
+  - other methods 
+  can be regarded as aiming for clusters with characteristics
+  somewhere between the single and complete link methods. 
+  - Note: methods "median" and "centroid" 
+  are not leading to a monotone distance measure, 
+  or equivalently the resulting dendrograms can have so called inversions or reversals which are hard to interpret, 
+  but note the trichotomies in Legendre and Legendre (2012)."
+```{r}
 # Compute the distance matrix
 dist_matrix <- dist(no_geom_scaled)
 
-# Perform hierarchical clustering
-hc <- hclust(dist_matrix, method = "complete")
+# Perform hierarchical clustering of different type
+set.seed(1)
+
+hc_single <- hclust(dist_matrix, method = "single")
+hc_ward <- hclust(dist_matrix, method = "ward.D")
+hc_complete <- hclust(dist_matrix, method = "complete")
 
 # Cut the tree into a desired number of clusters (e.g., 5 clusters)
-clusters <- cutree(hc, k = 5)
-
-# Add the clusters to the original data frame
-laura_kmeans_no_geom<- as.factor(clusters)
-
-# Print the data with cluster assignments
-print(laura_kmeans_no_geom)
-
-# Optionally, visualize the clusters if coordinates are available
-ggplot(data, aes(x = x, y = y, color = cluster)) +
-  geom_point(size = 3) +
-  labs(title = "Hierarchical Clustering of Point Observations",
-       x = "X Coordinate", y = "Y Coordinate") +
-  theme_minimal()
-
-# Visualize the hierarchical clustering dendrogram
-fviz_dend(hc, k = 3, rect = TRUE, rect_fill = TRUE,
-          show_labels = FALSE, main = "Dendrogram of Hierarchical Clustering")
-
-
+clust_ward_5 <- cutree(hc_ward, k = 5)
+clust_single_5 <- cutree(hc_single, k = 5)
+clust_complete_5 <- cutree(hc_complete, k = 5)
 
 ```
 
+### Checking the performance of different clustering methods 
+```{r}
+# Distribution of points among clusters
+summary(laura_na_omit$c_single_5)
+summary(laura_na_omit$c_ward_5)
+summary(laura_na_omit$c_compl_5)
+
+
+# Visualize the clustering results:
+
+# Dendogram: (takes a (+hour)-long to compute)
+#install.packages("factoextra")
+library(factoextra)
+# Visualize the hierarchical clustering dendrogram
+fviz_dend(hc_ward, k = 5, rect = TRUE, rect_fill = TRUE,
+          show_labels = FALSE, main = "Dendrogram of Hierarchical Clustering")
+
+
+# Map:  
+# Add the clusters to the original data frame
+laura_na_omit$c_single_5<- as.factor(clust_single_5)
+laura_na_omit$c_ward_5<- as.factor(clust_ward_5)
+laura_na_omit$c_compl_5<- as.factor(clust_complete_5)
+
+# Optionally, visualize the clusters if coordinates are available
+
+# add basemap
+
+
+# plot results
+P_ward_5<- laura_na_omit |> filter(trajID==3) |> 
+  tm_shape() +
+  tm_dots(size = 0.01, col = "c_ward_5") 
+# fast to compute, good differentiation
+
+P_single_5 <-laura_na_omit |> filter(trajID==3) |> 
+  tm_shape() +
+  tm_dots(size = 0.01, col = "c_single_5")
+# bad differentiation
+
+P_comp_5 <-laura_na_omit |> filter(trajID==3) |> 
+  tm_shape() +
+  tm_dots(size = 0.01, col = "c_compl_5")
+# bad differentiation
+
+tmap_mode("plot")
+tmap_arrange(P_ward_5, P_single_5, P_comp_5)
+```
+
+Among the hclust methods (with k=5), clusters are most evently spread with ward.d-method. Complete- and single- method mainly result in one big cluster and 4 minor clusters. 
+
+The better differentiation of the ward-method is also visible when plotting the cluster groups on a map. The points mostly appear to visually fit the actual movement-type, with only few irregularities...  

@@ -106,7 +106,8 @@ trajIDs <- c(3, 9, 12)
 laura_df <- all_tracks_Laura |> 
   filter(trajID %in% trajIDs)
 
-tm_shape(laura_df)+
+tmap_mode("view")
+tm_shape(laura_df)+ 
   tm_dots(col = "trajID", palette = "Paired") 
 
 #### calculate the parameters ####
@@ -141,6 +142,34 @@ laura_df <- laura_df |>
   ) |> 
   ungroup()
 
+#### Removing infinite values from sinuosity column #### 
 
+summary(laura_df$sinuosity) # Max and Mean == Inf
+which(laura_df$sinuosity == -Inf) 
+which(laura_df$sinuosity == Inf) # There are only positive infinite numbers... 
+
+# ! sinuosity calculation creates infinite values... 
+# If these values are scaled for hmeans, the whole column turns to NaN 
+# --> Infinite values have to be turned to finite values! 
+# Here is a chatGPT solution for this: 
+
+# Replace Inf with the maximum and minimum finite values in the data
+finite_values <- laura_df$sinuosity[is.finite(laura_df$sinuosity)]
+
+  # Define large and small replacements
+large_value <- max(finite_values, na.rm = TRUE)
+# small_value <- min(finite_values, na.rm = TRUE)
+
+# Replace Inf (and -Inf)
+laura_df$sinuosity[laura_df$sinuosity == Inf] <- large_value
+#laura_df$sinuosity[laura_df$sinuosity == -Inf] <- small_value
+
+# Convert to numeric (not needed here, as values are already numeric)
+# laura_df$sinuosity_numeric <- as.numeric(laura_df$sinuosity)
+
+# Print the cleaned and scaled data
+summary(laura_df$sinuosity)
+
+#### k-means Analysis #### 
 
 
