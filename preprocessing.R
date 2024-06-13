@@ -27,6 +27,8 @@ library(slider) # for "sliding" over the datapoints (similar to leadlag or roll)
 library(factoextra)#kmeans
 library(cluster)#kmeans
 library(zoo) # for sinuosity
+#install.packages("vegan")
+library(vegan) # for k means partitioning
 
 ### Data Loading and Organisation
 laura_act <- read.csv("data/activities_Laura.csv")
@@ -136,40 +138,63 @@ laura_df <- laura_df |>
     avg_acc_60s = slide_dbl(acceleration, mean, .before = 30, .after = 30, .complete = TRUE),
     max_acc_10s = slide_dbl(acceleration, max, .before = 5, .after = 5, .complete = TRUE),
     el_change = (elevation -lag(elevation,  10)), #given in meters/10 datapooints, not sure if correct or makes sense!
-    d_direct10 = distance_by_element(lag(geometry,5), lead(geometry,5)),
+    d_direct10 = distance_by_element(lag(geometry,4), lead(geometry,5)),
     d_sinu10 = rollsum(distance, 10,align = "center", fill = NA), # function rollsum does basically the same as slide, was recommended by nils
-    sinuosity = d_sinu10/d_direct10 #here, some values are below 1, which does not make sense. Why could this be?? And others are higher than 22, which is also weird, but can be traced back to the stops that are not yet filtered out. (is a step we should still do)
-  ) |> 
+    #Bei der Verwendung der rollsum-Funktion mit Fenstergröße von 10, werden die Datenpunkte so zentriert, dass die Summe der 5 Punkte vor und der 4 Punkte nach dem aktuellen Punkt berechnet wird.
+    d_direct10 = case_when(d_direct10 == 0 ~ d_sinu10,
+                           TRUE ~ d_direct10),
+    #diese Abänderung von d_direct ist nötig, damit die sinuosity richtig berechnet wird und keine Inf Values herauskommen (wegen Nenner=0)
+    sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
-#### Removing infinite values from sinuosity column #### 
 
-summary(laura_df$sinuosity) # Max and Mean == Inf
-which(laura_df$sinuosity == -Inf) 
-which(laura_df$sinuosity == Inf) # There are only positive infinite numbers... 
-
-# ! sinuosity calculation creates infinite values... 
-# If these values are scaled for hmeans, the whole column turns to NaN 
-# --> Infinite values have to be turned to finite values! 
-# Here is a chatGPT solution for this: 
-
-# Replace Inf with the maximum and minimum finite values in the data
-finite_values <- laura_df$sinuosity[is.finite(laura_df$sinuosity)]
-
-  # Define large and small replacements
-large_value <- max(finite_values, na.rm = TRUE)
-# small_value <- min(finite_values, na.rm = TRUE)
-
-# Replace Inf (and -Inf)
-laura_df$sinuosity[laura_df$sinuosity == Inf] <- large_value
-#laura_df$sinuosity[laura_df$sinuosity == -Inf] <- small_value
-
-# Convert to numeric (not needed here, as values are already numeric)
-# laura_df$sinuosity_numeric <- as.numeric(laura_df$sinuosity)
-
-# Print the cleaned and scaled data
-summary(laura_df$sinuosity)
 
 #### k-means Analysis #### 
 
 
+#### Functions  #### 
+
+# Function hcoplot()
+# Reorder and plot dendrogram with colors for groups and legend
+# Usage:
+# hcoplot(tree = hclust.object, diss = dissimilarity.matrix, k = nb.clusters, 
+#	title = paste("Reordered dendrogram from",deparse(tree$call),sep="\n"))
+#
+# License: GPL-2 
+# Author: Francois Gillet, 23 August 2012
+# Revised: Daniel Borcard, 31 August 2017
+
+"hcoplot" <- function(tree, 
+                      diss, 
+                      lab = NULL,
+                      k, 
+                      title = paste("Reordered dendrogram from", 
+                                    deparse(tree$call), 
+                                    sep="\n"))
+{
+  require(gclus)
+  gr <- cutree(tree, k=k)
+  tor <- reorder.hclust(tree, diss)
+  plot(tor, 
+       labels = lab,
+       hang=-1, 
+       xlab=paste(length(gr),"sites"), 
+       sub=paste(k,"clusters"), 
+       main=title)
+  so <- gr[tor$order]
+  gro <- numeric(k)
+  for (i in 1 : k)
+  {
+    gro[i] <- so[1]
+    if (i<k) so <- so[so!=gro[i]]
+  }
+  rect.hclust(tor, 
+              k = k, 
+              border = gro + 1, 
+              cluster = gr)
+  legend("topright", 
+         paste("Cluster", 1 :k ), 
+         pch = 22, 
+         col = 2 : (k + 1), 
+         bty = "n")
+}

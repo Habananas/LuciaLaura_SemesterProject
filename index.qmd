@@ -29,6 +29,17 @@ wordcountaddin::word_count("index.qmd")
 
 
 BEARBEITEN!
+Fragen/zu Bearbeiten:
+- sin infinity vaclues wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
+- scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
+- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
+- dist matrix. Was ist das (Laura)?
+- k means n start - mitreinnehmen warum? (Laura)
+- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
+- Validation with manual clustering (by Speed (laura) or assigning movement type in GIS (Lucia)
+
+Papers to read: 
+- Izakian (2020) trajectory segmentation approach (in BIB)
 
 ## Introduction
 
@@ -55,12 +66,13 @@ infrastructure data by the city of Zurich (
 
 BEARBEITEN
 
-### k means 
-Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using k means clustering. 
-As there are 5 different travel modes present in the 5 samples (walking, running, tram, bike, train), we will start with k=5, and eventually reduce the number of clusters if necessary. 
+### Clustering 
 
-For this, space and time of trajectories will be treated to be relative .
-The parameters for k-means will be calculated from the given geographical data and include:
+Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using clustering. 
+To determine the number of clusters needed, the data is analysed with ... (functions).  
+5 different travel modes could be identified in the samples (walking, running, tram, bike, train), therefore the optimal number of clusters expected is 5. 
+Space and time of trajectories will be treated to be relative and will be filtered out for the analysis.
+The parameters for clustering will be calculated from the given geographical data and include:
 - distance p1 - p2
 - speed p1 - p2
 - acceleration p1 - p2
@@ -70,14 +82,30 @@ The parameters for k-means will be calculated from the given geographical data a
 - max acceleration in moving window
 - elevation change in moving window 
 - sinuosity in moving window
+
 (other experimental stuff like azimuth, direction, turn? how to do that?)
 
-Initially, it was planned to use a k-means algorithm  that takes categorical variables into account (such as infrastructure data), however this was not possible with the k-mode() function and the ... package was not supported by the R-version. 
+Difficulties sinuosity Berechnung: bei der Berechnung haben einige Punkte einen Wert von Inf. Das kommt daher, dass der Nenner (die direkte distanz) = 0 ist, d.h. am Anfangs und Endpunkt des Moving windows wurde die Position nicht verändert. Die tatsächlich gelaufene Distanz hat aber einen Wert>1, da innerhalb der 10 Punkte eine Bewegung stattgefunden hat. Daher ergibt sich der Wert tatsächlich/direkt= x/0= Inf. 
+Es gibt mehrere Möglichkeiten mit diesem Problem umzugehen: 
+1) Inf Werte auf den Maximalwert der Sinuosity setzen (Lucia)
+2) Werte komplett aus der Tabelle rausfiltern
+3) den tatsächlich gelaufenen Weg pro 10 Punkte einsetzen, dann ist   tatsächlich/direkt=x/x=1 (haben wir gemacht)
 
-### classification via decision tree?
--> If time, decision tree?? , PCA (Lucia?), 
+#### kmeans
 
-### verification
+Initially, it was planned to use a k-means algorithm  that takes categorical variables into account (such as infrastructure data), however this was not possible with the k-mode() function and the xxx package was not supported by the R-version. 
+_> 2hy didnt we do it with klar? doesnt work?
+
+"Das gewählte Distanzmass und der Modus für die sukzessive Fusion von Clustern haben einen grossen Einfluss auf das Endergebnis."(Dengler)
+-> haben wir das bedacht (Laura)?
+
+#### hmeans
+
+
+chaining erklären (deshlab ward am besten)
+
+### Verification with manual classification
+
 The quality of this analysis is then  assessed by visual analysis and comparison with GIS data. 
 Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
 

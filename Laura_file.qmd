@@ -217,11 +217,21 @@ laura_df <- laura_df |>
     avg_acc_60s = slide_dbl(acceleration, mean, .before = 30, .after = 30, .complete = TRUE),
     max_acc_10s = slide_dbl(acceleration, max, .before = 5, .after = 5, .complete = TRUE),
     el_change = (elevation -lag(elevation,  10)), #given in meters/10 datapooints, not sure if correct or makes sense!
-    d_direct10 = distance_by_element(lag(geometry,5), lead(geometry,5)),
+    d_direct10 = distance_by_element(lag(geometry,4), lead(geometry,5)),
     d_sinu10 = rollsum(distance, 10,align = "center", fill = NA), # function rollsum does basically the same as slide, was recommended by nils
+ #Bei der Verwendung der rollsum-Funktion mit Fenstergröße von 10, werden die Datenpunkte so zentriert, dass die Summe der 5 Punkte vor und der 4 Punkte nach dem aktuellen Punkt berechnet wird.
+   d_direct10 = case_when(d_direct10 == 0 ~ d_sinu10,
+                                TRUE ~ d_direct10),
+ #diese Abänderung von d_direct ist nötig, damit die sinuosity richtig berechnet wird und keine Inf Values herauskommen (wegen Nenner=0)
     sinuosity = d_sinu10/d_direct10 #here, some values are below 1, which does not make sense. Why could this be?? And others are higher than 22, which is also weird, but can be traced back to the stops that are not yet filtered out. (is a step we should still do)
   ) |> 
   ungroup()
+
+which(laura_df$d_direct10 > laura_df$d_sinu10)
+which(laura_df$d_direct10 == 0)
+summary(laura_df$sinuosity)
+
+
 
 
 #problem if all trajectories are in one table and you calculate distance/speed etc after that the last and first point is always wrongly calculated. Therefore, these outliers are removed:
@@ -360,8 +370,8 @@ tm_shape(joined)+
 
 laura_kmeans <- laura_df |> 
   dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) |> 
-  filter(speed>0) |> 
-  filter(d_direct10>0)
+  #filter(speed>0) |> 
+  #filter(d_direct10>0)das war von früher, wurde ge debugged
 
 laura_kmeans <- na.omit(laura_kmeans) #otherwise fehlermeldung. Wichtig, erst NA omit, dann  drop geometry, damit später wieder zusammenführbar!
 laura_kmeans_no_geom <- st_drop_geometry(laura_kmeans) # necessary so geometry column goes away, otherwise fviz not work

@@ -569,7 +569,7 @@ set.seed(1)
 
 # without direct & dsinu
 laura_kmeans_1 <- laura_df |> 
-  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, sinuosity) |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, sinuosity) |> 
   filter(speed>0) |> 
   na.omit() |> 
   st_drop_geometry()
@@ -582,20 +582,20 @@ laura_kmeans_2 <- laura_df |>
   st_drop_geometry()
 ```
 
-## k-means partitioning
+## k-means partitioning 
+Normally, this is done to define the number of clusters, so before the actual clustering is done. 
 ```{r}
 #install.packages("vegan")
 library(vegan)
-
 set.seed(1)
 
 # k-means partitioning, 2 to 5 groups
-KM.cascade_1 <- cascadeKM(laura_kmeans_no_geom_1,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
+KM.cascade <- cascadeKM(laura_kmeans_1,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
 summary(KM.cascade)
 KM.cascade$results
 KM.cascade$partition
 # k-means visualisation
-plot(KM.cascade_1, sortg = TRUE)
+plot(KM.cascade, sortg = TRUE)
 
 # no elevation
 KM.cascade_2 <- cascadeKM(laura_kmeans_2,  inf.gr = 2, sup.gr = 5, iter = 1000, criterion = "ssi")
@@ -643,6 +643,7 @@ From the help page:
 ```{r}
 # Compute the distance matrix
 dist_matrix <- dist(no_geom_scaled)
+#dist_matrix
 
 # Perform hierarchical clustering of different type
 set.seed(1)
@@ -678,6 +679,12 @@ summary(laura_na_omit$c_compl_5)
 # library(factoextra)
 # Visualize the hierarchical clustering dendrogram
 #fviz_dend(hc_ward, k = 5, rect = TRUE, rect_fill = TRUE, show_labels = FALSE, main = "Dendrogram of Hierarchical Clustering")
+
+# Track split into 5 clusters... 
+plot(clust_ward_5, main = "Ward")
+
+# Dendrogramm of cluster result
+plot(hc_ward, main = "Ward") # hat komischen schwarzen Balken unten (labels??)
 
 
 # Map:  
@@ -762,7 +769,7 @@ clust_3_complete_5 <- cutree(hc3_complete, k = 5)
 plot(clust_3_ward_5, main = "Ward")
 
 # Dendrogramm of cluster result
-plot(hc3_ward, main = "Ward") # hat komischen schwarzen Balken unten (labels??)
+plot(hc3_ward, main = "Ward", labels = FALSE) # hat komischen schwarzen Balken unten (labels??)
 
 library(dendextend)
 
@@ -774,6 +781,39 @@ library(factoextra)
 fviz_dend(hc3_ward, k = 5, rect = TRUE, rect_fill = TRUE, show_labels = FALSE, main = "Dendrogram of Hierarchical Clustering")
 #startet 4pm, still running at 5.19pm, 
 
+
+# other dendrogram (Dengler)
+hcoplot(hc3_ward, dist_matrix_3, lab = FALSE, k = 5) #function in Preprocessing
+
 ```
 
 
+### NOT NEEDED 
+#### Removing infinite values from sinuosity column (chatGTP solution)  
+```{r}
+summary(laura_df$sinuosity) # Max and Mean == Inf
+which(laura_df$sinuosity == -Inf) 
+which(laura_df$sinuosity == Inf) # There are only positive infinite numbers... 
+
+# ! sinuosity calculation creates infinite values... 
+# If these values are scaled for hmeans, the whole column turns to NaN 
+# --> Infinite values have to be turned to finite values! or could be removed 
+# Here is a chatGPT solution for this: 
+
+# Replace Inf with the maximum and minimum finite values in the data
+finite_values <- laura_df$sinuosity[is.finite(laura_df$sinuosity)]
+
+  # Define large and small replacements
+large_value <- max(finite_values, na.rm = TRUE)
+# small_value <- min(finite_values, na.rm = TRUE)
+
+# Replace Inf (and -Inf)
+laura_df$sinuosity[laura_df$sinuosity == Inf] <- large_value
+#laura_df$sinuosity[laura_df$sinuosity == -Inf] <- small_value
+
+# Convert to numeric (not needed here, as values are already numeric)
+# laura_df$sinuosity_numeric <- as.numeric(laura_df$sinuosity)
+
+# Print the cleaned and scaled data
+summary(laura_df$sinuosity)
+```
