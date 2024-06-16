@@ -1,12 +1,10 @@
-#Including all your code index.qmd and rendering it each time you want to preview your report makes your report less error prone and more reproducible, 
-#but this workflow can be cumbersome when the code takes a long time to execute. 
-#This prevents you iterating fast when writing up your report. We suggest the following method to solve this:
-#Outsource your preprocessing steps and especially the heavy computation into a seperate R-Script called preprocessing.R. 
 #In this script, generate all outputs that you will need in your report (index.qmd).
 #To “prove” that this script runs on your machine from top to bottom, in a new session and without any errors, use the function 
 knitr::spin("preprocessing.R") 
 #from the package knitr (you might need to install this first). 
 #Push the resulting files (preprocessing.html / preprocessing.md) to GitHub (this is a hard requirement).###
+
+#### Libraries ####
 
 # install.packages("XML")
 # install.packages("gitcreds")
@@ -30,11 +28,10 @@ library(zoo) # for sinuosity
 #install.packages("vegan")
 library(vegan) # for k means partitioning
 
-### Data Loading and Organisation
-laura_act <- read.csv("data/activities_Laura.csv")
+#### Data Loading and Organisation #### 
 
 # Get a list of files in the folder
-folder_path <- "data/activities_Laura/"
+folder_path <- "activities_both/" # folder with only the selected tracks
 file_list <- list.files(folder_path, full.names = TRUE)
 
 #Create a function that assigns coordinates, elevation, time and activity name out of the gpx file, then apply this function to all of the gpx files:
@@ -68,60 +65,61 @@ for (file_path in file_list) {
   gpx_to_df(file_path)
 }
 
-# Combine single track-files to one Dataframe
-dflist_Laura <- substring(file_list,17,34)
-dflist_Laura
-all_tracks_Laura <- do.call(rbind, lapply(dflist_Laura, get))
+# Combine single track-files to one Dataframe 
 
-# Delete single track files from environment
-rm(list= dflist_Laura)
+dflist <- substring(file_list,17,34)
+dflist
+all_tracks <- do.call(rbind, lapply(dflist, get))
+
+# Delete single track files from environment -----> is this needed?
+rm(list= dflist)
 
 # Converting the df to sf object
 library(sf)
-all_tracks_Laura <- st_as_sf(all_tracks_Laura, coords = c("lon", "lat"), crs = 4326)
-str(all_tracks_Laura)
+all_tracks <- st_as_sf(all_tracks, coords = c("lon", "lat"), crs = 4326)
+str(all_tracks)
 
 # Transforming the crs to CH1903 +LV95 or EPSG:2056 & Timezone
-all_tracks_Laura <- st_transform(all_tracks_Laura, 2056)
-str(all_tracks_Laura)
+all_tracks <- st_transform(all_tracks, 2056)
+str(all_tracks)
 # Check Timezone
-attr(all_tracks_Laura$timestamp, "tzone")
+attr(all_tracks$timestamp, "tzone")
 
 #  Filtering out old data
-all_tracks_Laura <- all_tracks_Laura |> 
+all_tracks <- all_tracks |> 
   mutate("year" = year(timestamp)) |> #for this use library lubridate
   filter(year == 2024)
 
-# Specify TRajID --> To differentiate between the different records, I would like to assign an ID next to the name. This is also to ensure, that if there were tracks with the same name, their fixes are not combined. 
+#Specify trajectory IDs
+#To differentiate between the different records, we assign an ID. 
+#This is also to ensure that if there were tracks with the same name, their fixes are not combined. 
 ## Create function
 rle_id <- function(vec) {
   x <- rle(vec)$lengths
   as.factor(rep(seq_along(x), times = x))
 }
 ## Apply function to run along record_names
-all_tracks_Laura <- all_tracks_Laura |>
+all_tracks <- all_tracks |>
   mutate(trajID = rle_id(rec_id))
+summary(all_tracks)
 
-# choose 3 exemplary trajectories (of mixed movement?)
-trajIDs <- c(3, 9, 12)
+# choose exemplary trajectories (of mixed movement)  (or not, if we already did in before step)
+trajIDs <- c(1 , 2, 3) #now, we just have the tracks that interest us, therefore we just select all.
 
-laura_df <- all_tracks_Laura |> 
+selected_tracks <- all_tracks |> 
   filter(trajID %in% trajIDs)
 
-tmap_mode("view")
-tm_shape(laura_df)+ 
-  tm_dots(col = "trajID", palette = "Paired") 
 
-#### calculate the parameters ####
+#### calculation of parameters ####
 
-# Distanz FUnktion
+# Distanz Funktion
 distance_by_element <- function(later, now) {
   as.numeric(
     st_distance(later, now, by_element = TRUE)
   )
 }
 # Movement Parameter
-laura_df <- laura_df |> 
+selected_tracks <- selected_tracks |> 
   group_by(trajID) |>  # Gruppieren nach trajID
   mutate(
     distance = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1
@@ -151,15 +149,111 @@ laura_df <- laura_df |>
 
 #### k-means Analysis #### 
 
+# again data prep & Partitioning 
 
-#### Functions  #### 
+selected_tracks_na_omit <- na.omit(selected_tracks)
+# without direct & dsinu
+km_no_sinu_geom <- selected_tracks_na_omit |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
 
-# Function hcoplot()
-# Reorder and plot dendrogram with colors for groups and legend
-# Usage:
-# hcoplot(tree = hclust.object, diss = dissimilarity.matrix, k = nb.clusters, 
-#	title = paste("Reordered dendrogram from",deparse(tree$call),sep="\n"))
+km_no_sinu<- km_no_sinu_geom |> 
+  st_drop_geometry()
+
+# add. rm elevation change
+km_all_geom <- selected_tracks_na_omit |> 
+  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
+  na.omit() 
+
+km_all <- km_all_geom |> 
+  st_drop_geometry()
+#  Important, first NA omit, then  drop geometry, damit später wieder zusammenführbar!geometry column has to go away, otherwise fviz not work
+
+km_all_scaled <- km_all %>%
+  scale()
+
+
+# Find the right amount of clusters
+plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
+
+plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
+#interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
+
 #
+KM.cascade <- cascadeKM(km_all_scaled,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
+summary(KM.cascade)
+cascade_results <- KM.cascade$results #SSI 
+cascade_results 
+#KM.cascade$partition
+
+set.seed(1)
+
+#apply k means 
+km_4 <- kmeans(km_all_scaled, 4)
+km_5 <- kmeans(km_all_scaled, 5)
+#why dont we define n-start? it is auto defined anyway, therefore. 
+# nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
+
+km_all_geom<- cbind(km_all_geom, kmeans4 = km_4$cluster) 
+km_all_geom<- cbind(km_all_geom, kmeans5 = km_5$cluster) 
+
+
+#### h means analysis ####
+hm_all_scaled <- km_all %>%
+  scale()
+
+# Compute the distance matrix
+dist_matrix <- dist(hm_all_scaled)
+#dist_matrix
+
+# Perform hierarchical clustering of different type
+set.seed(1)
+
+hc_single <- hclust(dist_matrix, method = "single")
+hc_ward <- hclust(dist_matrix, method = "ward.D")
+hc_complete <- hclust(dist_matrix, method = "complete")
+
+# Cut the tree into a desired number of clusters (e.g., 4 clusters)
+clust_ward_4 <- cutree(hc_ward, k = 4)
+clust_single_4 <- cutree(hc_single, k = 4)
+clust_complete_4 <- cutree(hc_complete, k = 4)
+
+# Add the clusters to the original data frame
+km_all_geom$c_ward_4<- as.factor(clust_ward_4)
+km_all_geom$c_single_4<- as.factor(clust_single_4)
+km_all_geom$c_compl_4<- as.factor(clust_complete_4)
+
+# Distribution of points among clusters
+summary(km_all_geom$c_ward_4)
+summary(km_all_geom$c_single_4)
+summary(km_all_geom$c_compl_4)
+
+# Track split into 5 clusters... 
+ward_plot <- plot(clust_ward_4, main = "Ward")
+
+# Dendrogramm of cluster result
+ward_dendro <- plot(hc_ward, main = "Ward") # hat komischen schwarzen Balken unten (labels??)
+
+# plot results
+P_ward_4<- km_all_geom |> 
+  tm_shape() +
+  tm_dots(size = 0.05, col = "c_ward_4") 
+# fast to compute, good differentiation
+
+
+#### Verification #####
+
+##### ANOVA #####
+
+
+##### t test #####
+
+
+#### Other functions #####
+
+# Function hcoplot(): (from Research Methods)
+# Reorder and plot dendrogram with colors for groups and legend
+# Usage: hcoplot(tree = hclust.object, diss = dissimilarity.matrix, k = nb.clusters, 
+#	title = paste("Reordered dendrogram from",deparse(tree$call),sep="\n"))
 # License: GPL-2 
 # Author: Francois Gillet, 23 August 2012
 # Revised: Daniel Borcard, 31 August 2017

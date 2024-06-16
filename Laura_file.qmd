@@ -369,7 +369,7 @@ tm_shape(joined)+
 #plötzlich funktioniert select nicht mehr? This error occurs when you attempt to use the select() function from the dplyr package in R but also have the MASS package loaded. then use dyplr::select()
 
 laura_kmeans <- laura_df |> 
-  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) |> 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10, sinuosity) 
   #filter(speed>0) |> 
   #filter(d_direct10>0)das war von früher, wurde ge debugged
 

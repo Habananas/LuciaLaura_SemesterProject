@@ -1,5 +1,5 @@
 ---
-title: We need a better title
+title: A Travel Mode Detection approach based on hierarchical and non hierarchical clustering
 subtitle: Patterns and Trends in Environmental Data
 author: Lucia Scheele and Laura Vetter
 format:
@@ -27,10 +27,18 @@ wordcountaddin::word_count("index.qmd")
 
 ## Abstract
 
+This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. 
+Data was collected for X trajectories with different travel modes within the trajectories. Followingly, the travel modes were determined by visual analysis and using parameters like speed, ... Followingly, kmeans and hmeans clustering were applied to the datasets in order to define the travelm modes.
+Verification took place using t-test and ANOVA. 
+The results show that 
+- k means was able to identify 5 clusters, which corresponds to the actual amount of travel modes
+- the ward method in hmeans is better than ...
+- xxx showed a better (or equally good) result than manual classification. 
+- ... ANOVA & t test
 
 BEARBEITEN!
 Fragen/zu Bearbeiten:
-- sin infinity vaclues wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
+- die infinity vaclues wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
 - scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
 - spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
 - dist matrix. Was ist das (Laura)?
@@ -38,15 +46,14 @@ Fragen/zu Bearbeiten:
 - can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
 - Validation with manual clustering (by Speed (laura) or assigning movement type in GIS (Lucia)
 
+- was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
+- turning angles function? 
 Papers to read: 
 - Izakian (2020) trajectory segmentation approach (in BIB)
 
 ## Introduction
 
 In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (Sadeghian et al. 2020). 
-
-In this semester project, movement data collected by two individuals over a three month period is analyzed and compared in order to understand the concepts of segmentation, similarity analysis and k-means clustering and test whether these methods can be applied to human movement data with relatively small coherence within the data sets. 
-
 @laube2011 investigate how temporal scale affects the calculation of movement parameters (speed, sinuosity and turning angle) of animal trajectories. 
 
 ... leading to the research question of which travel modes can be differentiated in a collection of trajectories using  k-means clustering?
@@ -60,10 +67,9 @@ App Strava, by two individuals over a timespan of April - May 2024.
 Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of k-means, a sample of 5 trips will be selected to be analyzed.
 Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train). 
 
-Contextual data that might be used for the analysis is traffic
-infrastructure data by the city of Zurich (
-[https://www.stadt-zuerich.ch/geodaten/](#0){.uri} ) and the TLM???
-
+At first, it was considered to include contextual data such as traffic infrastructure data by the city of Zurich (
+[https://www.stadt-zuerich.ch/geodaten/](#0){.uri}), however these are ordinal data and are therefore not suitable for the normal k-means algorithm. 
+(Discussion: If more time & resources, other clustering method that also allows ordinal/categorical variables to be considered)
 BEARBEITEN
 
 ### Clustering 
@@ -71,9 +77,9 @@ BEARBEITEN
 Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using clustering. 
 To determine the number of clusters needed, the data is analysed with ... (functions).  
 5 different travel modes could be identified in the samples (walking, running, tram, bike, train), therefore the optimal number of clusters expected is 5. 
-Space and time of trajectories will be treated to be relative and will be filtered out for the analysis.
+Space and time of trajectories were treated to be relative and are filtered out for the analysis.
 The parameters for clustering will be calculated from the given geographical data and include:
-- distance p1 - p2
+- distance point1 - point2
 - speed p1 - p2
 - acceleration p1 - p2
 - mean speed in moving window 
@@ -109,8 +115,18 @@ chaining erklären (deshlab ward am besten)
 The quality of this analysis is then  assessed by visual analysis and comparison with GIS data. 
 Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
 
+
+
 ## Results
 
+x tracks were chosen which include several travel modes. 
+
+```{r}
+tmap_mode("view")
+tm_shape(selected_tracks)+ 
+  tm_dots(col = "trajID", palette = "Paired") 
+
+```
 ### parameters
 
 ```{r}
@@ -127,39 +143,63 @@ tm_shape(laura_df)+
           breaks = seq(0, 3, by = 0.1)) 
 ```
 
-### applying k means  (non hierarchical clustering)
+### k means  (non hierarchical clustering)
+
+#### partitioning 
+There are severeal methods to define the appropriate amount of clusters for kmeans, one of them being the elbow method (https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method) and anotherone the Gap Statistic Method. 
+Using the fviz_nbclust() function from the factoextra package, the right amount of clusters was identified. 
 
 ```{r}
 plot_k
 
 ```
-The optimal number of clusters with the given parameters seems to be  5, when not taking in sinuosity, and 4 with sinuosity.
+In the elbow statistic, the best amount of clusters seems to be 4, as the curve starts to bend there. 
 ```{r}
-km25
-
-plot_cluster25_5
-
-tm_shape(laura_kmeans)+
-  tm_dots(col = "cluster_25_5", palette = "RdYlGn") 
-
-```
-Changing the nstart value to 50
-```{r}
-km50
-#fehlt noch
+plot_k_gapstat #processing takes very long... therefore left out
 ```
 
-Changing the cluster number to 4?
 ```{r}
-km25_4
+cascade_results
+```
+The SSE is a measure of how well the data points are summarized within the clusters.
+The SSE is lowest for 5 clusters (4.433731e+05), which indicates good clustering, however, the ssi (silhouette width) is lowest, indicating bad clustering. Therefore, also the cascade method gets to 4 clusters. 
+
+OLD INFO: The optimal number of clusters with the given parameters seems to be  5, when not taking in sinuosity, and 4 with sinuosity.
+#### applying k means 
+(we left out the n start criterion -> bring in if more time?)
+```{r}
+tm_shape(km_all_geom)+
+  tm_dots(col = "kmeans4", palette = "RdYlGn") 
+```
+das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. 
+Und Strassenbahn und Fahrrad sind ebenfalls gleich
+
+Changing the cluster number to 5:
+```{r}
+tm_shape(km_all_geom)+
+  tm_dots(col = "kmeans5", palette = "RdYlGn") 
 
 ```
 
 das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. Und Strassenbahn und Fahrrad sind ebenfalls gleich
+Und auch Kurven mit dem Fahrrad sieht es nicht als solche, sondern klassifiziert sie anders. 
 
-
-### hierarchical clustering 
+###  hmeans (hierarchical  clustering)
 meaning that e.g. cluster bike is closer to running and tram is closer to train 
+
+```{r}
+ward_plot
+ward_dendro 
+```
+
+```{r}
+P_ward_4
+```
+Works well with differentiation between running and walking, but nbike and tram look the same. 
+### Verification
+
+ANOVA and t test
+
 
 ## Discussion
 
