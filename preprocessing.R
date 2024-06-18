@@ -104,7 +104,7 @@ all_tracks <- all_tracks |>
 summary(all_tracks)
 
 # choose exemplary trajectories (of mixed movement)  (or not, if we already did in before step)
-trajIDs <- c(1 , 2, 3) #now, we just have the tracks that interest us, therefore we just select all.
+trajIDs <- c(1, 3) #now, we just have the tracks that interest us, therefore we just select all.
 
 selected_tracks <- all_tracks |> 
   filter(trajID %in% trajIDs)
@@ -145,6 +145,34 @@ selected_tracks <- selected_tracks |>
     sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
+##### manual clustering  #####
+
+selected_tracks  <- selected_tracks  |>
+  mutate(manual_cluster = case_when(
+    speed_kmh == 0 ~ "1", #standing
+    speed_kmh < 5 ~ "2", #walking
+    speed_kmh >= 5 & speed_kmh < 18 ~ "3",  #running
+    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # velo 
+    speed_kmh < 30 ~ "5" # tram
+  ))
+
+##### transformation of unevenness  #####
+
+selected_tracks <- selected_tracks  |> 
+  mutate(
+    transformed_values = slide_dbl(
+     as.numeric(manual_cluster),
+      ~ ifelse(
+        .x != lag(.x, default = .x[1]) & .x != mode(.x),
+        1,
+        .x
+      ),
+      before = 5,
+      after = 5,
+      .complete = TRUE
+    )
+  )
+
 
 
 #### k-means Analysis #### 
@@ -152,6 +180,7 @@ selected_tracks <- selected_tracks |>
 # again data prep & Partitioning 
 
 selected_tracks_na_omit <- na.omit(selected_tracks)
+
 # without direct & dsinu
 km_no_sinu_geom <- selected_tracks_na_omit |> 
   dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
@@ -174,8 +203,6 @@ km_all_scaled <- km_all %>%
 
 # Find the right amount of clusters
 plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
-
-plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
 #interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
 
 #
@@ -193,8 +220,8 @@ km_5 <- kmeans(km_all_scaled, 5)
 #why dont we define n-start? it is auto defined anyway, therefore. 
 # nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
 
-km_all_geom<- cbind(km_all_geom, kmeans4 = km_4$cluster) 
-km_all_geom<- cbind(km_all_geom, kmeans5 = km_5$cluster) 
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans4 = km_4$cluster) 
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5 = km_5$cluster) 
 
 
 #### h means analysis ####
@@ -218,14 +245,29 @@ clust_single_4 <- cutree(hc_single, k = 4)
 clust_complete_4 <- cutree(hc_complete, k = 4)
 
 # Add the clusters to the original data frame
-km_all_geom$c_ward_4<- as.factor(clust_ward_4)
-km_all_geom$c_single_4<- as.factor(clust_single_4)
-km_all_geom$c_compl_4<- as.factor(clust_complete_4)
+selected_tracks_na_omit$c_ward_4<- as.factor(clust_ward_4)
+selected_tracks_na_omit$c_single_4<- as.factor(clust_single_4)
+selected_tracks_na_omit$c_compl_4<- as.factor(clust_complete_4)
 
 # Distribution of points among clusters
-summary(km_all_geom$c_ward_4)
-summary(km_all_geom$c_single_4)
-summary(km_all_geom$c_compl_4)
+summary(selected_tracks_na_omit$c_ward_4)
+summary(selected_tracks_na_omit$c_single_4)
+summary(selected_tracks_na_omit$c_compl_4)
+# we wont take into consideration single and complete, as the cluster distribution is not suitable (see chaining).
+
+
+# export (preliminary table with just one track) to define cluster in GIS 
+coords <- st_coordinates(selected_tracks_na_omit)
+
+# Add x and y columns to the sf object
+selected_tracks_na_omit$x <- coords[,1]
+selected_tracks_na_omit$y <- coords[,2]
+
+ selected_tracks_na_omit |> 
+  filter(trajID == 3) |> 
+   write_csv( file = "data/traj3Laura_cluster")
+
+
 
 # Track split into 5 clusters... 
 ward_plot <- plot(clust_ward_4, main = "Ward")
@@ -234,7 +276,7 @@ ward_plot <- plot(clust_ward_4, main = "Ward")
 ward_dendro <- plot(hc_ward, main = "Ward") # hat komischen schwarzen Balken unten (labels??)
 
 # plot results
-P_ward_4<- km_all_geom |> 
+P_ward_4<- selected_tracks_na_omit |> 
   tm_shape() +
   tm_dots(size = 0.05, col = "c_ward_4") 
 # fast to compute, good differentiation
@@ -245,8 +287,14 @@ P_ward_4<- km_all_geom |>
 ##### ANOVA #####
 
 
-##### t test #####
+##### corr test #####
 
+
+#cor.test(selected_tracks_na_omit$clusterGIS, df$clusterk, method = "pearson") # this one not, as it as linearity as condition
+cor.test(as.numeric(selected_tracks_na_omit$manual_cluster), as.numeric(selected_tracks_na_omit$kmeans4),  method = "spearman") 
+class(selected_tracks_na_omit$manual_cluster)
+
+cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,, method = "kendall")
 
 #### Other functions #####
 

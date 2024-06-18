@@ -28,7 +28,7 @@ wordcountaddin::word_count("index.qmd")
 ## Abstract
 
 This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. 
-Data was collected for X trajectories with different travel modes within the trajectories. Followingly, the travel modes were determined by visual analysis and using parameters like speed, ... Followingly, kmeans and hmeans clustering were applied to the datasets in order to define the travelm modes.
+Data was collected for 3 trajectories with different travel modes within the trajectories. Followingly, the travel modes were determined by visual analysis using parameters like speed, ... Followingly, kmeans and hmeans clustering were applied to the datasets in order to define the travelm modes.
 Verification took place using t-test and ANOVA. 
 The results show that 
 - k means was able to identify 5 clusters, which corresponds to the actual amount of travel modes
@@ -45,9 +45,10 @@ Fragen/zu Bearbeiten:
 - k means n start - mitreinnehmen warum? (Laura)
 - can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
 - Validation with manual clustering (by Speed (laura) or assigning movement type in GIS (Lucia)
-
 - was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
 - turning angles function? 
+- first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
+- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Dabei muss es nicht unbedingt  o
 Papers to read: 
 - Izakian (2020) trajectory segmentation approach (in BIB)
 
@@ -96,6 +97,38 @@ Es gibt mehrere Möglichkeiten mit diesem Problem umzugehen:
 1) Inf Werte auf den Maximalwert der Sinuosity setzen (Lucia)
 2) Werte komplett aus der Tabelle rausfiltern
 3) den tatsächlich gelaufenen Weg pro 10 Punkte einsetzen, dann ist   tatsächlich/direkt=x/x=1 (haben wir gemacht)
+#### manual clustering ####
+Here, we encountered two problems: 
+a) the stops (this can be resolved with the step mean and static function, which is then assigned as an extra category)
+b) inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
+
+```{r}
+tmap_mode("view")
+tm_shape(selected_tracks)+ 
+  tm_dots(col = "trajID", palette = "Paired")
+
+tmap_mode("view")
+
+cluster_manual_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+selected_tracks <- selected_tracks %>%
+  mutate(transformed_values_char = as.character(transformed_values))
+
+cluster_smoothed_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "transformed_values", palette = "RdYlGn")+
+tm_view(set.view = c(8.524527, 47.390118,  16))
+
+cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+
+tmap_arrange(cluster_smoothed_map, cluster_manual_map,cluster_k_map )
+
+```
+
 
 #### kmeans
 
@@ -130,17 +163,17 @@ tm_shape(selected_tracks)+
 ### parameters
 
 ```{r}
-tm_shape(laura_df)+
+tm_shape(selected_tracks)+
   tm_dots(col = "speed_kmh", palette = "RdYlGn") 
 
-tm_shape(laura_df)+
+tm_shape(selected_tracks)+
   tm_dots(col = "el_change", palette = "RdYlGn") 
 
 
-tm_shape(laura_df)+
-  tm_dots(col = "sinuosity", palette = "RdYlGn",
+tm_shape(selected_tracks)+
+  tm_dots(col = "manual_cluster", palette = "RdYlGn",
           n =3 ,
-          breaks = seq(0, 3, by = 0.1)) 
+          breaks = seq(1, 3, by = 0.1)) 
 ```
 
 ### k means  (non hierarchical clustering)
@@ -162,7 +195,7 @@ plot_k_gapstat #processing takes very long... therefore left out
 cascade_results
 ```
 The SSE is a measure of how well the data points are summarized within the clusters.
-The SSE is lowest for 5 clusters (4.433731e+05), which indicates good clustering, however, the ssi (silhouette width) is lowest, indicating bad clustering. Therefore, also the cascade method gets to 4 clusters. 
+The SSE is lowest for 5 clusters (4.433731e+05), which indicates good clustering, however, the ssi (silhouette width) is lowest, indicating bad clustering. Therefore, 4 clusters is taken. 
 
 OLD INFO: The optimal number of clusters with the given parameters seems to be  5, when not taking in sinuosity, and 4 with sinuosity.
 #### applying k means 
@@ -180,8 +213,6 @@ tm_shape(km_all_geom)+
   tm_dots(col = "kmeans5", palette = "RdYlGn") 
 
 ```
-
-das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. Und Strassenbahn und Fahrrad sind ebenfalls gleich
 Und auch Kurven mit dem Fahrrad sieht es nicht als solche, sondern klassifiziert sie anders. 
 
 ###  hmeans (hierarchical  clustering)
@@ -197,11 +228,25 @@ P_ward_4
 ```
 Works well with differentiation between running and walking, but nbike and tram look the same. 
 ### Verification
+Kontrollgruppe (GIS)  und Clustergruppen 
+H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
+H1: Die Gruppenzuordnungen (Cluster) sind ungleich bei Kontroll und Clustergruppen
 
-ANOVA and t test
+
+#### t test - eher CHi2 test? da
+
+#### ANOVA 
+
+#### t test mit rID Segmentierung 
+
+Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test ohne rID segmentierung, das heisst die Gruppenzuweisungen sind sich mit rID segmentierung ähnlicher.
+
 
 
 ## Discussion
+
+Clustering with single tracks works better than when clustering with all tracks -> method less accurate when using fixes of several trajectories? not generally applicable (reproducible)?
+
 
 ## Appendix
 
