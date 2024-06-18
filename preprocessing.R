@@ -1,7 +1,3 @@
-#In this script, generate all outputs that you will need in your report (index.qmd).
-#To “prove” that this script runs on your machine from top to bottom, in a new session and without any errors, use the function 
-knitr::spin("preprocessing.R") 
-#from the package knitr (you might need to install this first). 
 #Push the resulting files (preprocessing.html / preprocessing.md) to GitHub (this is a hard requirement).###
 
 #### Libraries ####
@@ -112,13 +108,13 @@ selected_tracks <- all_tracks |>
 
 #### calculation of parameters ####
 
-# Distanz Funktion
+# Distance Function
 distance_by_element <- function(later, now) {
   as.numeric(
     st_distance(later, now, by_element = TRUE)
   )
 }
-# Movement Parameter
+# Movement Parameters Calculation
 selected_tracks <- selected_tracks |> 
   group_by(trajID) |>  # Gruppieren nach trajID
   mutate(
@@ -145,7 +141,7 @@ selected_tracks <- selected_tracks |>
     sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
-##### manual clustering  #####
+##### manual clustering with speed  #####
 
 selected_tracks  <- selected_tracks  |>
   mutate(manual_cluster = case_when(
@@ -156,7 +152,7 @@ selected_tracks  <- selected_tracks  |>
     speed_kmh < 30 ~ "5" # tram
   ))
 
-##### transformation of unevenness  #####
+##### transformation of unevenness in the manual clustering  #####
 
 selected_tracks <- selected_tracks  |> 
   mutate(
@@ -174,58 +170,58 @@ selected_tracks <- selected_tracks  |>
   )
 
 
-
 #### k-means Analysis #### 
 
-# again data prep & Partitioning 
+##### data prep & partitioning #####
 
 selected_tracks_na_omit <- na.omit(selected_tracks)
 
-# without direct & dsinu
-km_no_sinu_geom <- selected_tracks_na_omit |> 
-  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
+# we dont need this for now
+"without direct & dsinu
+    km_no_sinu_geom <- selected_tracks_na_omit |> 
+      dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
+    
+    km_no_sinu<- km_no_sinu_geom |> 
+      st_drop_geometry()"
 
-km_no_sinu<- km_no_sinu_geom |> 
-  st_drop_geometry()
-
-# add. rm elevation change
+"selection of the needed criteria and drop of geometry "
 km_all_geom <- selected_tracks_na_omit |> 
   select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
-  na.omit() 
-
-km_all <- km_all_geom |> 
+  na.omit() |> 
   st_drop_geometry()
 #  Important, first NA omit, then  drop geometry, damit später wieder zusammenführbar!geometry column has to go away, otherwise fviz not work
 
-km_all_scaled <- km_all %>%
+km_all_scaled <- km_all_geom %>%
   scale()
 
 
-# Find the right amount of clusters
+##### Find the right amount of clusters #####
+
+# elbow method 
 plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
 #interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
 
-#
+# cascade method
 KM.cascade <- cascadeKM(km_all_scaled,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
 summary(KM.cascade)
 cascade_results <- KM.cascade$results #SSI 
 cascade_results 
-#KM.cascade$partition
 
+
+
+
+##### apply k means #####
 set.seed(1)
-
-#apply k means 
 km_4 <- kmeans(km_all_scaled, 4)
 km_5 <- kmeans(km_all_scaled, 5)
-#why dont we define n-start? it is auto defined anyway, therefore. 
-# nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
 
+# bind cluster outputs to the initial table 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans4 = km_4$cluster) 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5 = km_5$cluster) 
 
 
 #### h means analysis ####
-hm_all_scaled <- km_all %>%
+hm_all_scaled <- km_all_geom %>%
   scale()
 
 # Compute the distance matrix
@@ -283,18 +279,29 @@ P_ward_4<- selected_tracks_na_omit |>
 
 
 #### Verification #####
+kappa 
+##### kappa coeficient ? ANOVA? CHI SQUARE7fisher test? RANKSUM? #####
+# kappa didnt work. 
+# rank sum is for ordinal, ois not ordinal. 
+# chi square is for two or more  independent nominal groups - is this the case?
 
-##### ANOVA #####
+# FISHERS TEST
+only_clusters <- selected_tracks_na_omit |> 
+  dplyr::select(manual_cluster, kmeans4, kmeans5) |> 
+  st_drop_geometry()
+  
 
+fisher.test(only_clusters)
 
 ##### corr test #####
 
 
 #cor.test(selected_tracks_na_omit$clusterGIS, df$clusterk, method = "pearson") # this one not, as it as linearity as condition
 cor.test(as.numeric(selected_tracks_na_omit$manual_cluster), as.numeric(selected_tracks_na_omit$kmeans4),  method = "spearman") 
+
 class(selected_tracks_na_omit$manual_cluster)
 
-cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,, method = "kendall")
+cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,method = "kendall")
 
 #### Other functions #####
 

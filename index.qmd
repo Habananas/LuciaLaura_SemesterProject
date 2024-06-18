@@ -12,18 +12,36 @@ lang: en  # switch to "de" if you write your report in german
 bibliography: bibliography.bib
 ---
 
-
-```{r preprocessing}
-#| code-summary: preprocessing
-``` 
-
-```{r preprocessing}
+```{r}
+knitr::spin("preprocessing.R") 
 install.packages("pacman") 
 library("pacman")
 p_install_gh("benmarwick/wordcountaddin")
 wordcountaddin::word_count("index.qmd")
-
+#| code-summary: preprocessing
 ``` 
+
+
+Fragen:
+- wie preproces und index file zu gemeinsamen html?
+- die infinity values wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
+- scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
+- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
+- dist matrix. Was ist das (Laura)?
+-CHECK k means n start - mitreinnehmen warum? (Laura) 
+- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
+- CHECK Validation with manual clustering (by Speed (laura) 
+- or assigning movement type in GIS (Lucia)
+- was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
+- first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
+- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
+
+zu Bearbeiten:
+- turning angles function? 
+
+Papers to read: 
+- Izakian (2020) trajectory segmentation approach (in BIB)
+
 
 ## Abstract
 
@@ -31,36 +49,19 @@ This project aims to analyze travel behaviour and clustering of travel segments 
 Data was collected for 3 trajectories with different travel modes within the trajectories. Followingly, the travel modes were determined by visual analysis using parameters like speed, ... Followingly, kmeans and hmeans clustering were applied to the datasets in order to define the travelm modes.
 Verification took place using t-test and ANOVA. 
 The results show that 
+...
 - k means was able to identify 5 clusters, which corresponds to the actual amount of travel modes
 - the ward method in hmeans is better than ...
 - xxx showed a better (or equally good) result than manual classification. 
-- ... ANOVA & t test
-
-BEARBEITEN!
-Fragen/zu Bearbeiten:
-- die infinity vaclues wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
-- scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
-- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
-- dist matrix. Was ist das (Laura)?
-- k means n start - mitreinnehmen warum? (Laura)
-- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
-- Validation with manual clustering (by Speed (laura) or assigning movement type in GIS (Lucia)
-- was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
-- turning angles function? 
-- first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
-- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Dabei muss es nicht unbedingt  o
-Papers to read: 
-- Izakian (2020) trajectory segmentation approach (in BIB)
+- ... Verification method 
 
 ## Introduction
 
 In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (Sadeghian et al. 2020). 
 @laube2011 investigate how temporal scale affects the calculation of movement parameters (speed, sinuosity and turning angle) of animal trajectories. 
-
-... leading to the research question of which travel modes can be differentiated in a collection of trajectories using  k-means clustering?
+leading to the research question of which travel modes can be differentiated in a collection of trajectories using  k-means clustering?
 
 ## Material and Methods
-
 
 ### Data
 The data sample consists of movement data collected with the Tracking
@@ -76,7 +77,7 @@ BEARBEITEN
 ### Clustering 
 
 Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using clustering. 
-To determine the number of clusters needed, the data is analysed with ... (functions).  
+To determine the number of clusters needed, the trajectory data is analysed with   (functions).  
 5 different travel modes could be identified in the samples (walking, running, tram, bike, train), therefore the optimal number of clusters expected is 5. 
 Space and time of trajectories were treated to be relative and are filtered out for the analysis.
 The parameters for clustering will be calculated from the given geographical data and include:
@@ -97,7 +98,9 @@ Es gibt mehrere Möglichkeiten mit diesem Problem umzugehen:
 1) Inf Werte auf den Maximalwert der Sinuosity setzen (Lucia)
 2) Werte komplett aus der Tabelle rausfiltern
 3) den tatsächlich gelaufenen Weg pro 10 Punkte einsetzen, dann ist   tatsächlich/direkt=x/x=1 (haben wir gemacht)
-#### manual clustering ####
+
+
+#### manual clustering 
 Here, we encountered two problems: 
 a) the stops (this can be resolved with the step mean and static function, which is then assigned as an extra category)
 b) inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
@@ -148,7 +151,9 @@ chaining erklären (deshlab ward am besten)
 The quality of this analysis is then  assessed by visual analysis and comparison with GIS data. 
 Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
 
-
+```{r}
+#ergebnis von chi square
+```
 
 ## Results
 
@@ -157,7 +162,8 @@ x tracks were chosen which include several travel modes.
 ```{r}
 tmap_mode("view")
 tm_shape(selected_tracks)+ 
-  tm_dots(col = "trajID", palette = "Paired") 
+  tm_dots(col = "trajID", palette = "Paired") +
+  tm_view(set.view = c(8.524527, 47.390118,  16))
 
 ```
 ### parameters
@@ -183,25 +189,27 @@ There are severeal methods to define the appropriate amount of clusters for kmea
 Using the fviz_nbclust() function from the factoextra package, the right amount of clusters was identified. 
 
 ```{r}
-plot_k
+plot_k_elbow
 
 ```
-In the elbow statistic, the best amount of clusters seems to be 4, as the curve starts to bend there. 
+In the elbow statistic, the best amount of clusters seems to be 2(???), as the curve starts to bend there.  
+
 ```{r}
 plot_k_gapstat #processing takes very long... therefore left out
 ```
-
+We tried gapstat, but it took to long  to calculate. 
+Another method is the cascade (SOURCE LUCIA).
+The SSE (sum of squared errors) is a measure of how well the data points are summarized within the clusters. The lower, the better the clustering. In the ssi (silhouette index) the higher the value (from -1 to 1) the better the clustering.
 ```{r}
 cascade_results
 ```
-The SSE is a measure of how well the data points are summarized within the clusters.
-The SSE is lowest for 5 clusters (4.433731e+05), which indicates good clustering, however, the ssi (silhouette width) is lowest, indicating bad clustering. Therefore, 4 clusters is taken. 
+The SSE is lowest for 5 clusters, which indicates good clustering, and also the ssi is highest in 5 clusters. 
+Therefore, we try k means with 4 and 5 clusters. 
 
-OLD INFO: The optimal number of clusters with the given parameters seems to be  5, when not taking in sinuosity, and 4 with sinuosity.
 #### applying k means 
-(we left out the n start criterion -> bring in if more time?)
+We left out the n start criterion -> but would have liked to bring in if more time, as running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
 ```{r}
-tm_shape(km_all_geom)+
+tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "kmeans4", palette = "RdYlGn") 
 ```
 das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. 
@@ -209,7 +217,7 @@ Und Strassenbahn und Fahrrad sind ebenfalls gleich
 
 Changing the cluster number to 5:
 ```{r}
-tm_shape(km_all_geom)+
+tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "kmeans5", palette = "RdYlGn") 
 
 ```
@@ -244,6 +252,8 @@ Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test 
 
 
 ## Discussion
+
+- change of results when sinuosity inf values different?
 
 Clustering with single tracks works better than when clustering with all tracks -> method less accurate when using fixes of several trajectories? not generally applicable (reproducible)?
 
