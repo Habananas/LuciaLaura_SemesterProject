@@ -13,14 +13,20 @@ bibliography: bibliography.bib
 ---
 
 ```{r}
-knitr::spin("preprocessing.R") 
-install.packages("pacman") 
-library("pacman")
-p_install_gh("benmarwick/wordcountaddin")
-wordcountaddin::word_count("index.qmd")
-#| code-summary: preprocessing
-``` 
+#| code-summary: preprocessing #name des Code Chunks
 
+load("my_environment.rdata")
+#load("selected_tracks.rda") (besser weil man dann nur lädt was man wirklich braucht)
+
+#install.packages("pacman") 
+#library("pacman")
+#p_install_gh("benmarwick/wordcountaddin")
+#wordcountaddin::word_count("index.qmd") 
+library(tmap) #to show data in map viewer, is necesary in 
+
+
+``` 
+knitr::spin("preprocessing.R") --> macht "run" von preprocessing file und produziert html. 
 
 Fragen:
 - wie preproces und index file zu gemeinsamen html?
@@ -106,6 +112,8 @@ a) the stops (this can be resolved with the step mean and static function, which
 b) inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
 
 ```{r}
+
+
 tmap_mode("view")
 tm_shape(selected_tracks)+ 
   tm_dots(col = "trajID", palette = "Paired")
@@ -116,8 +124,6 @@ cluster_manual_map <- tm_shape(selected_tracks)+
   tm_dots(col = "manual_cluster", palette = "RdYlGn")+
   tm_view(set.view = c(8.524527, 47.390118,  16))
 
-selected_tracks <- selected_tracks %>%
-  mutate(transformed_values_char = as.character(transformed_values))
 
 cluster_smoothed_map <- tm_shape(selected_tracks)+ 
   tm_dots(col = "transformed_values", palette = "RdYlGn")+
@@ -195,7 +201,7 @@ plot_k_elbow
 In the elbow statistic, the best amount of clusters seems to be 2(???), as the curve starts to bend there.  
 
 ```{r}
-plot_k_gapstat #processing takes very long... therefore left out
+#plot_k_gapstat #processing takes very long... therefore left out
 ```
 We tried gapstat, but it took to long  to calculate. 
 Another method is the cascade (SOURCE LUCIA).
@@ -262,11 +268,28 @@ Clustering with single tracks works better than when clustering with all tracks 
 
 ### Wordcount
 
-<!-- after installing the wordcountadding, remove the line "#| eval: false" -->
+<!-- after installing the wordcountaddin, remove the line "#| eval: false" -->
 
-```{r}
-#| eval: false
-wordcountaddin::word_count("index.qmd")
-```
+
+
+
+install.packages("wordcountaddin")
+library("wordcountaddin")
+#wordcountaddin::word_count("index.qmd")
+
+
+# Datei einlesen
+text <- readLines("index.qmd", warn = FALSE)
+
+# Text in einen einzigen String konvertieren
+text <- paste(text, collapse = " ")
+char_count <- nchar(text)
+
+print(char_count)
+# Wörter zählen
+word_count <- length(unlist(strsplit(text, "\\s+")))
+char_count <- length(text)
+print(char_count)
+
 
 

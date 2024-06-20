@@ -24,6 +24,10 @@ library(zoo) # for sinuosity
 #install.packages("vegan")
 library(vegan) # for k means partitioning
 
+
+
+
+
 #### Data Loading and Organisation #### 
 
 # Get a list of files in the folder
@@ -169,6 +173,22 @@ selected_tracks <- selected_tracks  |>
     )
   )
 
+
+
+cluster_manual_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+selected_tracks <- selected_tracks %>%
+  mutate(transformed_values_char = as.character(transformed_values))
+
+cluster_smoothed_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "transformed_values", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
 
 #### k-means Analysis #### 
 
@@ -319,7 +339,7 @@ only_clusters <- selected_tracks_na_omit |>
   st_drop_geometry()
   
 
-fisher.test(only_clusters)
+#fisher.test(only_clusters)
 
 ##### corr test #####
 
@@ -330,6 +350,20 @@ cor.test(as.numeric(selected_tracks_na_omit$manual_cluster), as.numeric(selected
 class(selected_tracks_na_omit$manual_cluster)
 
 cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,method = "kendall")
+
+
+
+##### save the image of everything #####
+
+# save(selected_tracks,file="selected_tracks.rda") -> dont need
+
+save.image("my_environment.rdata") #speichert das gesamte environment ab
+# den generierten File muss man in gitignore mit reinnehmen, da er meist zu gross ist für github
+
+
+
+
+
 
 #### Other functions #####
 
