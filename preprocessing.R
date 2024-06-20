@@ -283,7 +283,35 @@ kappa
 ##### kappa coeficient ? ANOVA? CHI SQUARE7fisher test? RANKSUM? #####
 # kappa didnt work. 
 # rank sum is for ordinal, ois not ordinal. 
+
 # chi square is for two or more  independent nominal groups - is this the case?
+#chat gpt Chi square example: 
+# Erstellen einer Beispiel-Datenrahmen
+set.seed(123)
+Cluster1 <- sample(1:5, 100, replace = TRUE)
+Cluster2 <- sample(1:5, 100, replace = TRUE)
+Cluster3 <- sample(1:5, 100, replace = TRUE)
+df <- data.frame(Cluster1, Cluster2, Cluster3)
+
+# Erstellen einer Kontingenztabelle
+table_12 <- table(df$Cluster1, df$Cluster2)
+table_13 <- table(df$Cluster1, df$Cluster3)
+table_23 <- table(df$Cluster2, df$Cluster3)
+
+table_man_k4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$kmeans4)
+table_ward_h4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$c_ward_4)
+table_single_h4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$c_single_4)
+
+# Chi-Quadrat-Test
+chi_12 <- chisq.test(table_12)
+chi_13 <- chisq.test(table_13)
+chi_23 <- chisq.test(table_23)
+
+chi_man_k4 <- chisq.test(table_man_k4)
+chi_ward_h4 <- chisq.test(table_ward_h4)
+chi_single_h4 <- chisq.test(table_single_h4)
+# --> we always can only compare one clustering method with one other.
+# --> all of the tests have a sign. lower than 0.05, so it doesnt serve our purpose really?
 
 # FISHERS TEST
 only_clusters <- selected_tracks_na_omit |> 
