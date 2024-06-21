@@ -15,70 +15,54 @@ bibliography: bibliography.bib
 ```{r}
 #| code-summary: preprocessing #name des Code Chunks
 
+#loading all the data from the preprocessing files
 load("my_environment.rdata")
 #load("selected_tracks.rda") (besser weil man dann nur lädt was man wirklich braucht)
 
-#install.packages("pacman") 
-#library("pacman")
-#p_install_gh("benmarwick/wordcountaddin")
-#wordcountaddin::word_count("index.qmd") 
 library(tmap) #to show data in map viewer, is necesary in 
 
-
 ``` 
-knitr::spin("preprocessing.R") --> macht "run" von preprocessing file und produziert html. 
-
-Fragen:
-- wie preproces und index file zu gemeinsamen html?
-- die infinity values wurden jetzt zu 1 transformiert. Macht das am meisten Sinn? Begründung
-- scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
-- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
-- dist matrix. Was ist das (Laura)?
--CHECK k means n start - mitreinnehmen warum? (Laura) 
-- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
-- CHECK Validation with manual clustering (by Speed (laura) 
-- or assigning movement type in GIS (Lucia)
-- was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
-- first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
-- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
-
-zu Bearbeiten:
-- turning angles function? 
-
-Papers to read: 
-- Izakian (2020) trajectory segmentation approach (in BIB)
-
 
 ## Abstract
 
 This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. 
-Data was collected for 3 trajectories with different travel modes within the trajectories. Followingly, the travel modes were determined by visual analysis using parameters like speed, ... Followingly, kmeans and hmeans clustering were applied to the datasets in order to define the travelm modes.
-Verification took place using t-test and ANOVA. 
+Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hmeans. Simultaneously, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare them to the clustering. 
+Verification took place using Chi square test and ANOVA ?????
+
 The results show that 
-...
-- k means was able to identify 5 clusters, which corresponds to the actual amount of travel modes
+
+- 5 clusters, which corresponds to the actual amount of travel modes (+standing)
+- hmeans predicts better than kmeans 
 - the ward method in hmeans is better than ...
 - xxx showed a better (or equally good) result than manual classification. 
-- ... Verification method 
+-  Verification method 
+- ...
+BEARBEITEN 
 
 ## Introduction
+BEARBEITEN 
 
-In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (Sadeghian et al. 2020). 
+In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (@sadeghian2022stepwise). 
+However, the exact detection of the corresponding travel modes is complex and can be time consuming.  
+Generic methodologies to detect travel modes have been described using unsupervised learning algorithms, GIS multi-criteria process (eg. by @sadeghian2022stepwise), and supervised learning algorithms or decision trees and confusion matrix(@shamoun2012sensor).
+This project aims to answer the reasearch question of which travel modes can be differentiated in trajectories with different travel modes within the trajectories using hierarchical and non-hierarical clustering?
+Therefore, the project focuses on a comparison of these two clustering methods, and a comparison with a manual segmentation using ArcGIS and a threshold segmentation using the parameter speed.
+
+
+Auch reinbringen?:
 @laube2011 investigate how temporal scale affects the calculation of movement parameters (speed, sinuosity and turning angle) of animal trajectories. 
-leading to the research question of which travel modes can be differentiated in a collection of trajectories using  k-means clustering?
+
+
 
 ## Material and Methods
 
 ### Data
-The data sample consists of movement data collected with the Tracking
-App Strava, by two individuals over a timespan of April - May 2024.
-Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of k-means, a sample of 5 trips will be selected to be analyzed.
+The data sample consists of movement data collected with the Tracking App Strava, by two individuals over a timespan of April - May 2024.
+Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of the clustering methods, a sample of 2 trips with different movement types within the trajectory were selected to be analyzed.
 Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train). 
 
-At first, it was considered to include contextual data such as traffic infrastructure data by the city of Zurich (
-[https://www.stadt-zuerich.ch/geodaten/](#0){.uri}), however these are ordinal data and are therefore not suitable for the normal k-means algorithm. 
-(Discussion: If more time & resources, other clustering method that also allows ordinal/categorical variables to be considered)
-BEARBEITEN
+At first, it was considered to include contextual data such as traffic infrastructure data by the city of Zurich ( [https://www.stadt-zuerich.ch/geodaten/](#0){.uri}), however these are categorical data and are therefore not suitable for the evaluation with the k-means clustering algorithm.
+
 
 ### Clustering 
 
@@ -97,73 +81,59 @@ The parameters for clustering will be calculated from the given geographical dat
 - elevation change in moving window 
 - sinuosity in moving window
 
-(other experimental stuff like azimuth, direction, turn? how to do that?)
+The calculation of sinuosity, some adaptions needed to be made as some values had the value "Inf". This occurs when the direct distance = 0, meaning that start and end point of the moving window are the same. The actual moving distance is >1, as within the moving window movement occured. 
 
-Difficulties sinuosity Berechnung: bei der Berechnung haben einige Punkte einen Wert von Inf. Das kommt daher, dass der Nenner (die direkte distanz) = 0 ist, d.h. am Anfangs und Endpunkt des Moving windows wurde die Position nicht verändert. Die tatsächlich gelaufene Distanz hat aber einen Wert>1, da innerhalb der 10 Punkte eine Bewegung stattgefunden hat. Daher ergibt sich der Wert tatsächlich/direkt= x/0= Inf. 
-Es gibt mehrere Möglichkeiten mit diesem Problem umzugehen: 
-1) Inf Werte auf den Maximalwert der Sinuosity setzen (Lucia)
-2) Werte komplett aus der Tabelle rausfiltern
-3) den tatsächlich gelaufenen Weg pro 10 Punkte einsetzen, dann ist   tatsächlich/direkt=x/x=1 (haben wir gemacht)
+actual moving distance /direct distance = x/0=Inf  
+
+There are several ways to deal with this problem: 
+1) Set inf values to the maximum value of the sinuosity 
+2) Filter out values completely from the table
+3) Insert the actual distance traveled per 10 points,  actual/direct=x/x=1 
+
+The third method was chosen, resulting in the lowest sinuosity value possible (=1).
 
 
-#### manual clustering 
-Here, we encountered two problems: 
-a) the stops (this can be resolved with the step mean and static function, which is then assigned as an extra category)
-b) inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
+#### Classification via threshold  
 
+
+The following segmentation was made: (vllt lieber decision tree statt den code?)
 ```{r}
+selected_tracks  <- selected_tracks  |>
+  mutate(manual_cluster = case_when(
+    speed_kmh == 0 ~ "1", #standing
+    speed_kmh < 5 ~ "2", #walking
+    speed_kmh >= 5 & speed_kmh < 18 ~ "3",  #running
+    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # velo 
+    speed_kmh < 30 ~ "5" # tram
+  ))
+```
+Problem: 
+inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
+Resolving with manual classification in GIS.
 
+### Verification with manual classification in GIS
 
-tmap_mode("view")
-tm_shape(selected_tracks)+ 
-  tm_dots(col = "trajID", palette = "Paired")
-
-tmap_mode("view")
-
-cluster_manual_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
-
-
-cluster_smoothed_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "transformed_values", palette = "RdYlGn")+
-tm_view(set.view = c(8.524527, 47.390118,  16))
-
-cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "kmeans5", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
-
-
-tmap_arrange(cluster_smoothed_map, cluster_manual_map,cluster_k_map )
-
+(DESCRIPTION OF WHAT WE DID)
+```{r}
+#map von GIS  
 ```
 
 
 #### kmeans
 
-Initially, it was planned to use a k-means algorithm  that takes categorical variables into account (such as infrastructure data), however this was not possible with the k-mode() function and the xxx package was not supported by the R-version. 
-_> 2hy didnt we do it with klar? doesnt work?
+K means is one of the most commonly used partition based algorithms (@yuan2017review), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster.
+Initially, a k-means algorithm should have been used that takes categorical (such as infrastructure data) and numerical variables into account, however this was not possible with the k-mode() function, and also, the infrastructural data taken into account was not overlapping with the trajectories in all cases. Therefore, the focus was set on the analysis of the numerical data.
 
-"Das gewählte Distanzmass und der Modus für die sukzessive Fusion von Clustern haben einen grossen Einfluss auf das Endergebnis."(Dengler)
--> haben wir das bedacht (Laura)?
 
 #### hmeans
-
+(LUCIA?)
 
 chaining erklären (deshlab ward am besten)
 
-### Verification with manual classification
-
-The quality of this analysis is then  assessed by visual analysis and comparison with GIS data. 
-Predictive Validation, accuracy, precision, recall, F1 Score, Confusion Matrix..
-
-```{r}
-#ergebnis von chi square
-```
 
 ## Results
 
-x tracks were chosen which include several travel modes. 
+2 trajectories were chosen which include several travel modes. 
 
 ```{r}
 tmap_mode("view")
@@ -239,15 +209,28 @@ ward_dendro
 
 ```{r}
 P_ward_4
+
+tmap_arrange(cluster_h_map, cluster_manual_map,cluster_k_map )
+
 ```
 Works well with differentiation between running and walking, but nbike and tram look the same. 
 ### Verification
+
+- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
+
+
+
 Kontrollgruppe (GIS)  und Clustergruppen 
 H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
 H1: Die Gruppenzuordnungen (Cluster) sind ungleich bei Kontroll und Clustergruppen
 
 
-#### t test - eher CHi2 test? da
+#### CHi2 test? da
+```{r}
+chi_man_k4
+```
+Hier kommt eine sehr niedrige Signifikanz raus, das heisst, die beiden clustermethoden sind sehr unterschiedlich. Warum? Weil sie nicht die gleichen Werte für die gleichen Cluster nehmen. Es ist also notwendig, erst die cluster visuell zu überprüfen abzugleichen und dann zuzuweisen, und dann den Test zu wiederholen. 
+Oder wir probieren es mit Korrelation
 
 #### ANOVA 
 
@@ -258,10 +241,22 @@ Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test 
 
 
 ## Discussion
+zu Bearbeiten:
+- turning angles function? 
 
 - change of results when sinuosity inf values different?
-
+- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
 Clustering with single tracks works better than when clustering with all tracks -> method less accurate when using fixes of several trajectories? not generally applicable (reproducible)?
+- Validation with GIS  speed information was used, therefore no indepentent control of cluster quality  
+- clustering of the corners  (when bike slows down - other cluster) we could have also calculated turn, but there was no time left
+- Discussion: If more time & resources, other clustering method that also allows ordinal/categorical variables to be considered
+
+anderes:
+- scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
+- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
+
+- was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
+- first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
 
 
 ## Appendix
@@ -270,26 +265,18 @@ Clustering with single tracks works better than when clustering with all tracks 
 
 <!-- after installing the wordcountaddin, remove the line "#| eval: false" -->
 
+```{r}
+#for word count:
+install.packages("pacman") 
+library("pacman")
+p_install_gh("benmarwick/wordcountaddin")
+wordcountaddin::word_count("index.qmd") 
+
+#knitr::spin("preprocessing.R") --> macht "run" von preprocessing file und produziert html. 
+
+```
 
 
-
-install.packages("wordcountaddin")
-library("wordcountaddin")
-#wordcountaddin::word_count("index.qmd")
-
-
-# Datei einlesen
-text <- readLines("index.qmd", warn = FALSE)
-
-# Text in einen einzigen String konvertieren
-text <- paste(text, collapse = " ")
-char_count <- nchar(text)
-
-print(char_count)
-# Wörter zählen
-word_count <- length(unlist(strsplit(text, "\\s+")))
-char_count <- length(text)
-print(char_count)
 
 
 

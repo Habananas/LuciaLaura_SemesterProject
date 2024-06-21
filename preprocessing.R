@@ -145,7 +145,7 @@ selected_tracks <- selected_tracks |>
     sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
-##### manual clustering with speed  #####
+##### Classification with speed  #####
 
 selected_tracks  <- selected_tracks  |>
   mutate(manual_cluster = case_when(
@@ -156,7 +156,7 @@ selected_tracks  <- selected_tracks  |>
     speed_kmh < 30 ~ "5" # tram
   ))
 
-##### transformation of unevenness in the manual clustering  #####
+##### LEAVE OUT transformation of unevenness in the manual clustering  #####
 
 selected_tracks <- selected_tracks  |> 
   mutate(
@@ -173,22 +173,6 @@ selected_tracks <- selected_tracks  |>
     )
   )
 
-
-
-cluster_manual_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
-
-selected_tracks <- selected_tracks %>%
-  mutate(transformed_values_char = as.character(transformed_values))
-
-cluster_smoothed_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "transformed_values", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
-
-cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "kmeans5", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
 
 #### k-means Analysis #### 
 
@@ -260,6 +244,10 @@ clust_ward_4 <- cutree(hc_ward, k = 4)
 clust_single_4 <- cutree(hc_single, k = 4)
 clust_complete_4 <- cutree(hc_complete, k = 4)
 
+clust_ward_5 <- cutree(hc_ward, k = 5)
+selected_tracks_na_omit$c_ward_5<- as.factor(clust_ward_5)
+summary(selected_tracks_na_omit$c_ward_5)
+
 # Add the clusters to the original data frame
 selected_tracks_na_omit$c_ward_4<- as.factor(clust_ward_4)
 selected_tracks_na_omit$c_single_4<- as.factor(clust_single_4)
@@ -279,9 +267,9 @@ coords <- st_coordinates(selected_tracks_na_omit)
 selected_tracks_na_omit$x <- coords[,1]
 selected_tracks_na_omit$y <- coords[,2]
 
+
  selected_tracks_na_omit |> 
-  filter(trajID == 3) |> 
-   write_csv( file = "data/traj3Laura_cluster")
+   write_csv( file = "data/traj1_traj3")
 
 
 
@@ -297,6 +285,22 @@ P_ward_4<- selected_tracks_na_omit |>
   tm_dots(size = 0.05, col = "c_ward_4") 
 # fast to compute, good differentiation
 
+#### maps ####
+
+cluster_manual_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+selected_tracks <- selected_tracks %>%
+  mutate(transformed_values_char = as.character(transformed_values))
+
+cluster_smoothed_map <- tm_shape(selected_tracks)+ 
+  tm_dots(col = "transformed_values", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
+
+cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5", palette = "RdYlGn")+
+  tm_view(set.view = c(8.524527, 47.390118,  16))
 
 #### Verification #####
 kappa 
@@ -328,6 +332,7 @@ chi_13 <- chisq.test(table_13)
 chi_23 <- chisq.test(table_23)
 
 chi_man_k4 <- chisq.test(table_man_k4)
+
 chi_ward_h4 <- chisq.test(table_ward_h4)
 chi_single_h4 <- chisq.test(table_single_h4)
 # --> we always can only compare one clustering method with one other.
