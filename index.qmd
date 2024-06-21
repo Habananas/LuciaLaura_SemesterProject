@@ -113,7 +113,10 @@ Resolving with manual classification in GIS.
 
 ### Verification with manual classification in GIS
 
-(DESCRIPTION OF WHAT WE DID)
+In Order to test the results of our cluster analysis, it was aimed to assess in how far the cluster categories are consistent with the actual movement types conducted during the trajectory recordings. This required two independent enrichments of the fix point data. In one step, the information of the actual movement type had to be added to the single trajectory fixes by using the recorder's knowledge of the track. This step was conducted within ArcGis (Tools: Select and Calculate Field). To help the recognition of movement type change, the fix points were colored using the speed (km/h) variable.  
+In another step, the individual cluster groups were inspected visually and statistically to find out which movement they are likely to represent.
+
+
 ```{r}
 #map von GIS  
 ```
@@ -217,7 +220,6 @@ Works well with differentiation between running and walking, but nbike and tram 
 ### Verification
 
 - wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
-
 
 
 Kontrollgruppe (GIS)  und Clustergruppen 
