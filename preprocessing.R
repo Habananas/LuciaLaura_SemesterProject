@@ -16,7 +16,7 @@ library(lubridate) # time
 library(knitr) #To “prove” that script runs on your machine from top to bottom
 #install.packages("slider")
 library(slider) # for "sliding" over the datapoints (similar to leadlag or roll)
-#install.packages("factoextra")
+#install.packages("factoextra") #elbow method and kmeans
 #install.packages("cluster")
 library(factoextra)#kmeans
 library(cluster)#kmeans
@@ -145,23 +145,44 @@ selected_tracks <- selected_tracks |>
     sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
+#maps parameters (still not NA omit!)
+speed_map <- tm_shape(selected_tracks)+
+  tm_dots(col = "speed_kmh", palette = "RdYlGn") +
+  tm_view(set.view = c(8.520515, 47.388322,  16))
+
+elevation_map <- tm_shape(selected_tracks)+
+  tm_dots(col = "el_change", palette = "RdYlGn") 
+
+
+##### NA omit and Drop Geom  #####
+# filter out all values with NA 
+selected_tracks_na_omit <- na.omit(selected_tracks)
+
+# filter out selected values and geometry for cluster analysis (important to first NA omit, then  drop geometry)
+km_no_geom <- selected_tracks_na_omit |> 
+  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
+  st_drop_geometry()
+#scale the values 
+km_all_scaled <- km_no_geom %>%
+  scale()
+
 ##### Classification with speed  #####
 
-selected_tracks  <- selected_tracks  |>
+selected_tracks_na_omit  <- selected_tracks_na_omit  |>
   mutate(manual_cluster = case_when(
     speed_kmh == 0 ~ "1", #standing
     speed_kmh < 5 ~ "2", #walking
     speed_kmh >= 5 & speed_kmh < 18 ~ "3",  #running
-    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # velo 
+    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # biking 
     speed_kmh < 30 ~ "5" # tram
   ))
 
 ##### LEAVE OUT transformation of unevenness in the manual clustering  #####
 
-selected_tracks <- selected_tracks  |> 
+selected_tracks_na_omit <- selected_tracks_na_omit  |> 
   mutate(
     transformed_values = slide_dbl(
-     as.numeric(manual_cluster),
+      as.numeric(manual_cluster),
       ~ ifelse(
         .x != lag(.x, default = .x[1]) & .x != mode(.x),
         1,
@@ -174,30 +195,33 @@ selected_tracks <- selected_tracks  |>
   )
 
 
+
+##### Classification with GIS   #####
+# export (preliminary table with just one track) to define cluster in GIS 
+coords <- st_coordinates(selected_tracks_na_omit)
+
+# Add x and y columns to the sf object
+selected_tracks_na_omit$x <- coords[,1]
+selected_tracks_na_omit$y <- coords[,2]
+selected_tracks_na_omit |> 
+  write_csv( file = "data/traj1_traj3")
+#was done in ArcGIS, and CSV was reimported. 
+traj1_traj3_mit_Zuordnung <- read_csv("traj1_traj3_mit_Zuordnung.csv")
+#assign values according to the ones in speed classification
+traj1_traj3_mit_Zuordnung <- traj1_traj3_mit_Zuordnung |> 
+  mutate(GIS_group = case_when(
+    GIS_Group == "standing" ~ "1",
+    GIS_Group == "walking" ~ "2",
+    GIS_Group == "running" ~ "3",
+    GIS_Group == "biking" ~ "4",
+    GIS_Group == "tram" ~ "5",
+  ))
+
+# Add the GIS class to the original data frame
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, GIS_group = traj1_traj3_mit_Zuordnung$GIS_group) 
+
+
 #### k-means Analysis #### 
-
-##### data prep & partitioning #####
-
-selected_tracks_na_omit <- na.omit(selected_tracks)
-
-# we dont need this for now
-"without direct & dsinu
-    km_no_sinu_geom <- selected_tracks_na_omit |> 
-      dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
-    
-    km_no_sinu<- km_no_sinu_geom |> 
-      st_drop_geometry()"
-
-"selection of the needed criteria and drop of geometry "
-km_all_geom <- selected_tracks_na_omit |> 
-  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
-  na.omit() |> 
-  st_drop_geometry()
-#  Important, first NA omit, then  drop geometry, damit später wieder zusammenführbar!geometry column has to go away, otherwise fviz not work
-
-km_all_scaled <- km_all_geom %>%
-  scale()
-
 
 ##### Find the right amount of clusters #####
 
@@ -212,72 +236,57 @@ cascade_results <- KM.cascade$results #SSI
 cascade_results 
 
 
-
-
 ##### apply k means #####
 set.seed(1)
 km_4 <- kmeans(km_all_scaled, 4)
 km_5 <- kmeans(km_all_scaled, 5)
 
-# bind cluster outputs to the initial table 
+#  Add the k clusters to the original data frame
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans4 = km_4$cluster) 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5 = km_5$cluster) 
 
 
-#### h means analysis ####
-hm_all_scaled <- km_all_geom %>%
+#### h means Analysis ####
+hm_all_scaled <- km_no_geom %>%
   scale()
 
 # Compute the distance matrix
 dist_matrix <- dist(hm_all_scaled)
-#dist_matrix
 
-# Perform hierarchical clustering of different type
+# Perform hierarchical clustering hmeans
 set.seed(1)
 
-hc_single <- hclust(dist_matrix, method = "single")
 hc_ward <- hclust(dist_matrix, method = "ward.D")
+hc_single <- hclust(dist_matrix, method = "single")
 hc_complete <- hclust(dist_matrix, method = "complete")
 
-# Cut the tree into a desired number of clusters (e.g., 4 clusters)
+# Cut the tree into a desired number of clusters (4 (with three different methods) and 5 clusters)
 clust_ward_4 <- cutree(hc_ward, k = 4)
 clust_single_4 <- cutree(hc_single, k = 4)
 clust_complete_4 <- cutree(hc_complete, k = 4)
-
+#complete and single are left out for k=5 bc they do not make appropriate assignation of datapoints to clusters as visible in summary
 clust_ward_5 <- cutree(hc_ward, k = 5)
-selected_tracks_na_omit$c_ward_5<- as.factor(clust_ward_5)
-summary(selected_tracks_na_omit$c_ward_5)
+
 
 # Add the clusters to the original data frame
 selected_tracks_na_omit$c_ward_4<- as.factor(clust_ward_4)
 selected_tracks_na_omit$c_single_4<- as.factor(clust_single_4)
 selected_tracks_na_omit$c_compl_4<- as.factor(clust_complete_4)
+selected_tracks_na_omit$c_ward_5<- as.factor(clust_ward_5)
 
 # Distribution of points among clusters
 summary(selected_tracks_na_omit$c_ward_4)
 summary(selected_tracks_na_omit$c_single_4)
 summary(selected_tracks_na_omit$c_compl_4)
+summary(selected_tracks_na_omit$c_ward_5)
 # we wont take into consideration single and complete, as the cluster distribution is not suitable (see chaining).
 
-
-# export (preliminary table with just one track) to define cluster in GIS 
-coords <- st_coordinates(selected_tracks_na_omit)
-
-# Add x and y columns to the sf object
-selected_tracks_na_omit$x <- coords[,1]
-selected_tracks_na_omit$y <- coords[,2]
-
-
- selected_tracks_na_omit |> 
-   write_csv( file = "data/traj1_traj3")
-
-
-
-# Track split into 5 clusters... 
-ward_plot <- plot(clust_ward_4, main = "Ward")
+# Track split into 4 & 5 clusters
+ward_plot_4 <- plot(clust_ward_4, main = "Ward")
+ward_plot_5 <- plot(clust_ward_5, main = "Ward")
 
 # Dendrogramm of cluster result
-ward_dendro <- plot(hc_ward, main = "Ward") # hat komischen schwarzen Balken unten (labels??)
+ward_dendro <- plot(hc_ward, main = "Ward") 
 
 # plot results
 P_ward_4<- selected_tracks_na_omit |> 
@@ -285,22 +294,37 @@ P_ward_4<- selected_tracks_na_omit |>
   tm_dots(size = 0.05, col = "c_ward_4") 
 # fast to compute, good differentiation
 
-#### maps ####
+#### Output Maps ####
 
-cluster_manual_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "manual_cluster", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
+tmap_mode("view")
+tm_view(set.view = c(8.524527, 47.390118,  16))
 
-selected_tracks <- selected_tracks %>%
+#speed parameter   
+cluster_speed_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "manual_cluster", palette = "RdYlGn")
+
+# smoothed speed parameter  
+selected_tracks_na_omit <- selected_tracks_na_omit %>%
   mutate(transformed_values_char = as.character(transformed_values))
 
-cluster_smoothed_map <- tm_shape(selected_tracks)+ 
-  tm_dots(col = "transformed_values", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
+cluster_smoothed_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "transformed_values_char", palette = "RdYlGn")
 
-cluster_k_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "kmeans5", palette = "RdYlGn")+
-  tm_view(set.view = c(8.524527, 47.390118,  16))
+# k means maps
+cluster_k5_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5", palette = "RdYlGn")
+
+cluster_k4_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans4", palette = "RdYlGn")
+
+# h means maps
+
+cluster_h4_ward <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "c_ward_4", palette = "RdYlGn")
+
+cluster_h5_ward <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "c_ward_5", palette = "RdYlGn")
+
 
 #### Verification #####
 kappa 
@@ -342,7 +366,7 @@ chi_single_h4 <- chisq.test(table_single_h4)
 only_clusters <- selected_tracks_na_omit |> 
   dplyr::select(manual_cluster, kmeans4, kmeans5) |> 
   st_drop_geometry()
-  
+
 
 #fisher.test(only_clusters)
 
