@@ -367,10 +367,8 @@ cluster_h5_ward <- tm_shape(selected_tracks_na_omit)+
 
 
 #### Verification #####
-kappa 
-##### kappa coeficient ? ANOVA? CHI SQUARE7fisher test? RANKSUM? #####
-# kappa didnt work. 
-# rank sum is for ordinal, ois not ordinal. 
+
+##### Chi square #####
 
 # chi square is for two or more  independent nominal groups - is this the case?
 #chat gpt Chi square example: 
@@ -404,11 +402,17 @@ chi_single_h4 <- chisq.test(table_single_h4)
 
 # FISHERS TEST
 only_clusters <- selected_tracks_na_omit |> 
-  dplyr::select(speed_cluster, GIS_number,  kmeans4, kmeans5) |> 
+  dplyr::select(speed_cluster, GIS_number,  kmeans4, kmeans5, kmeans5_100, c_ward_4, c_ward_5) |> 
   st_drop_geometry()
 
 
 #fisher.test(only_clusters)
+
+
+##### kappa coeficient  #####
+
+
+
 
 ##### corr test #####
 

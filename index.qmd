@@ -142,7 +142,7 @@ tm_shape(selected_tracks_na_omit)+
 tmap_arrange(speed_map, cluster_speed_map )
 
 ```
-
+Here we can see the 
 ### Speed parameter Classification and GIS Classification
 
 ```{r}
@@ -173,6 +173,7 @@ The ssi is highest for 5 groups, while the SSE decreases constantly with the ris
 
 The importance of the nstart criterium in the kmeans analysis is not to underestimate. In the following graphic, we can see the different results when using no predetermined n, n=20 and n=100.
 ```{r}
+library("gridExtra")
 grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3)
 
 ```
@@ -182,70 +183,82 @@ Here we can see the classification of the sample points in the point cloud, how 
 tmap_arrange( cluster_k5_map, cluster_k5_100_map )
 ```
 Looking at the two clusters k=5 and k5 n=100, we can see that the distribution of clusters is very similar, different to what the plots before indicated. 
-However, the clustering does not seem to 
-and das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. 
-Und Strassenbahn und Fahrrad sind ebenfalls gleich
-
+However, the clustering does not seem to work perfectly.
 
 ```{r}
 cluster_k4_map
 ```
-Changing to k=4, running, walking and a third category can be relatively clearly distinguished, however there is no distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. 
+Changing to k=4, running, walking and a third category can be relatively clearly distinguished, but there is no distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. 
 
 ###  hmeans (hierarchical  clustering)(LUCIA)
 meaning that e.g. cluster bike is closer to running and tram is closer to train 
 
 ```{r}
-ward_plot
-ward_dendro 
+#ward_plot_5
+#ward_dendro 
 ```
 
 ```{r}
-P_ward_4
+#P_ward_4
 
-tmap_arrange(cluster_h_map,cluster_k_map )
+#tmap_arrange(cluster_h5_ward,cluster_k5_map )
 
 ```
 Works well with differentiation between running and walking, but nbike and tram look the same. 
+
 ### Verification
 
-wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
+Premises:
+Clusterings with different k values are not directly comparable, as they have fundamentally different structures. Therefore, we will focus on the comparison of k=5 only. 
+We will compare:
+GIS - Speed
+GIS - kmeans
+GIS - kmeans_100
+GIS - hmeans_ward 
+speed - k_means_100 ?
+speed - hmeans_ward
+
+As we have several categorical variables (cluster groups) and do not suppose a causality between them, we will use  the chi square or fishers test. 
+
 
 Kontrollgruppe (GIS)  und Clustergruppen 
 H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
 H1: Die Gruppenzuordnungen (Cluster) sind ungleich bei Kontroll und Clustergruppen
 
 
-#### CHi2 test? da
+#### chi square test
 ```{r}
-chi_man_k4
+#chi_man_k4
 ```
 Hier kommt eine sehr niedrige Signifikanz raus, das heisst, die beiden clustermethoden sind sehr unterschiedlich. Warum? Weil sie nicht die gleichen Werte für die gleichen Cluster nehmen. Es ist also notwendig, erst die cluster visuell zu überprüfen abzugleichen und dann zuzuweisen, und dann den Test zu wiederholen. 
 Oder wir probieren es mit Korrelation
 
-#### ANOVA 
 
-#### t test mit rID Segmentierung 
+
+#### t test mit rID Segmentierung (WAS IST DAS NOCHMAL? )
 
 Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test ohne rID segmentierung, das heisst die Gruppenzuweisungen sind sich mit rID segmentierung ähnlicher.
 
 
 
 ## Discussion
-zu Bearbeiten:
-- turning angles function? 
 
-- change of results when sinuosity inf values different?
-- can we extract the parameters by which hmeans clusters? für Vergleich am Ende (wsl nicht)( Laura)
-Clustering with single tracks works better than when clustering with all tracks -> method less accurate when using fixes of several trajectories? not generally applicable (reproducible)?
-- Validation with GIS  speed information was used, therefore no indepentent control of cluster quality  
-- clustering of the corners  (when bike slows down - other cluster) we could have also calculated turn, but there was no time left
-- Discussion: If more time & resources, other clustering method that also allows ordinal/categorical variables to be considered
+It was observed that clustering with single tracks works better than clustering with all tracks. Therefor, the applicability of this method is questionable for bigger datasets or datasets with different movement patterns. 
+Furthermore, it needs to be mentioned that for thevalidation with GIS, the  speed information was used as a control. Therefore, independent control of cluster quality  cannot be guaranteed. 
 
-anderes:
+
+
+
+Left for further analysis:
+- At first, the turning angle was considered as an alternative parameter to mitigate the inaccuracies that occured when the bike slowed down in curves, however there was no time left to include this in the analysis and will therefore be left for another project. 
+- another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g. the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well. 
+-  Further clustering, such as kmodes, which also allows ordinal/categorical variables to be considered, would have been equally interesting and will be thought about in the future. 
+
+
+
+UNFINISHED, to be included in discussion:
+- The same goes for the spatial proximity of the data. This might have led to a disadvantage for clustering? (Lucia)
 - scale/normalisation. Warum normalisieren wir die Werte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?
-- spatial proximity: is dependency of data a disadvantage for clustering? (Lucia)
-
 - was haben wir nochmal mit den Randpunkten gemacht? Also wenns von einem track zum nächsten geht? haben wor dafür eine Function oder so damit die speeds etc nicht verfälscht sind?
 - first clustering with only one track & verification with CHi/ANOVA and then with various & verification. -> this tells us wether method is generalizable or not? 
 
@@ -258,7 +271,7 @@ anderes:
 
 ```{r}
 #for word count:
-install.packages("pacman") 
+#install.packages("pacman") 
 library("pacman")
 p_install_gh("benmarwick/wordcountaddin")
 wordcountaddin::word_count("index.qmd") 
