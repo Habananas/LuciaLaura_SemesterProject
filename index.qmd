@@ -39,6 +39,9 @@ The results show that
 - ...
 BEARBEITEN 
 
+TO CONSIDER:
+Interactive maps are only reasonable for small amounts of data (e.g. a few locations of a single wild boar). If you want to show a large amount of data, consider making a static map instead (using tmap_mode("plot")).
+
 ## Introduction
 BEARBEITEN 
 
@@ -58,7 +61,7 @@ Auch reinbringen?:
 
 ### Data
 The data sample consists of movement data collected with the Tracking App Strava, by two individuals over a timespan of April - May 2024.
-Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of the clustering methods, a sample of 2 trips with different movement types within the trajectory were selected to be analyzed.
+Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of the clustering methods, a sample of 2 trips with different movement types within the trajectory were selected to be analyzed. The tracks were selected so that all movement types standing, walking, running, biking and tram were included. 
 Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train).
 At first, including contextual data such as traffic infrastructure data by the city of Zurich ( [https://www.stadt-zuerich.ch/geodaten/](#0){.uri}) was considered. Out of two reasons, it was decided not to include this data: 1) categorical data is not suitable for the evaluation with the k-means clustering algorithm and 2) the infrastructure data dit not overlap with the trajectories in many cases and was therefore not especially meaningful. Therefore, the focus was set on the analysis of the numerical data.
 
@@ -100,8 +103,7 @@ In order to verify how well speed alone can already predict the different moveme
     speed_kmh >= 18 & speed_kmh < 30 ~ "4", # velo 
     speed_kmh > 30 ~ "5" # tram
 
-The encountered problem was the unhomogenity of some fixes, e.g. when the threshold is set at a point where the speed varies constantly (e.g. speed>5 = running, speed<5 = walking)
-This issue was resolved with manual classification in GIS.
+Possible unhomogenity of some fixes could be a problem, e.g. when the threshold is set at a point where the speed varies constantly (e.g. speed>5 = running, speed<5 = walking). This issue will be resolved with manual classification in GIS.
 
 
 ### Verification with manual classification in GIS
@@ -131,27 +133,27 @@ FEHLER: WARUM ERSCHEINT ein 3ter Track im Label (aber dann nicht auf der Map)?
 ```{r}
 tmap_mode("view")
 tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "trajID", palette = "Paired") +  
-  tm_view(set.view = c(8.520515, 47.388322,  16))
+  tm_dots(col = "trajID", palette = "Paired")
 
 ```
 
 ### Speed and Speed Classification
-
+The parameters mentioned in the methods were calculated
 ```{r}
 tmap_arrange(speed_map, cluster_speed_map )
 
 ```
-Here we can see the 
-### Speed parameter Classification and GIS Classification
+The left map shows the actual speed per datafix, while the second map shows the classification via the speed thresholds. Here, most of the biking part and the tram are classified correctly, however the differentiation between walking and running is not perfect and also incorrect when the tram slows down.
 
+### Speed parameter Classification and GIS Classification
+Therefore, we did a manual assignation of the groups in GIS.
 ```{r}
 #| fig-cap: "Map of the manually assigned groups and the Speed parameter Classification"
 #| label: GIS_Group and manual
 
   tmap_arrange(cluster_speed_map, cluster_GIS_map )
 ```
-Looking at the two 
+
 
 ### k means  (non hierarchical clustering)
 
@@ -177,18 +179,19 @@ library("gridExtra")
 grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3)
 
 ```
-Here we can see the classification of the sample points in the point cloud, how many data points belong to which cluster. From this, it is not yet possible to determine which cluster might correspond to which travel mode and which n suits our classification best. 
+Here we can see the classification of the sample points in the point cloud, how many data points belong to which cluster. From this, it is not yet possible to determine which clustering method might correspond best to the original movement type and which n suits our classification best. 
 
 ```{r}
-tmap_arrange( cluster_k5_map, cluster_k5_100_map )
+tmap_arrange(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )
 ```
-Looking at the two clusters k=5 and k5 n=100, we can see that the distribution of clusters is very similar, different to what the plots before indicated. 
-However, the clustering does not seem to work perfectly.
+Looking at the clusters with k=5, k=5&n=20 and k=5&n=100, we can see that the distribution of clusters is very similar (meaning that varying n does not make a great difference), different to what the plots before indicated. However, two problems are encountered again: 
+1) the clusters are not assigned in the same way for the different clusters
+2) the clustering does not seem to work perfectly with running/walking and also has problems with differentiation between tram & bike. 
 
 ```{r}
 cluster_k4_map
 ```
-Changing to k=4, running, walking and a third category can be relatively clearly distinguished, but there is no distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. 
+Changing to k=4, running, walking and a third category can be relatively clearly distinguished, but there is neither a distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. For further analysis we will therefore leave out the k=4. 
 
 ###  hmeans (hierarchical  clustering)(LUCIA)
 meaning that e.g. cluster bike is closer to running and tram is closer to train 
@@ -204,22 +207,57 @@ meaning that e.g. cluster bike is closer to running and tram is closer to train
 #tmap_arrange(cluster_h5_ward,cluster_k5_map )
 
 ```
-Works well with differentiation between running and walking, but nbike and tram look the same. 
+Works well with differentiation between running and walking, but bike and tram look the same. 
+
+
+
 
 ### Verification
 
 Premises:
 Clusterings with different k values are not directly comparable, as they have fundamentally different structures. Therefore, we will focus on the comparison of k=5 only. 
+The n criteria in kmeans does not play such a big role in cluster assignation after all, therefore, only k=5&n=100 is taken into account for verification.
+The best method to analyse several categorical variables (cluster groups) with no supposed causality between them is the chi square or fishers test. However, fishers test is for smaller data samples (sample size less than 1000), therefore the chi square is the appropriate test (Source: https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher's_Exact_Test )
+
 We will compare:
-GIS - Speed
-GIS - kmeans
-GIS - kmeans_100
-GIS - hmeans_ward 
-speed - k_means_100 ?
-speed - hmeans_ward
+- GIS - Speed
+- GIS - kmeans_100
+- GIS - hmeans_ward 
+- speed - kmeans_100 ?
+- speed - hmeans_ward
+- hmeans_ward - kmeans_100
 
-As we have several categorical variables (cluster groups) and do not suppose a causality between them, we will use  the chi square or fishers test. 
+#### chi square test
 
+```{r}
+chi_tests
+```
+X-squared: This is the value of the chi-squared statistic. The larger χ 2, the more likely that the variables are related.
+
+df: This is the number of degrees of freedom. It is typically calculated as (number of rows-1)×(number of columns-1) in the contingency table.
+
+p-value: This is the p-value of the test. A very small p-value (in this case extremely small) indicates that the probability of obtaining the observed data when the null hypothesis is true is very low.
+
+```{r}
+results_df
+```
+The X-squared value is highest comparing the hmeans and kmeans values, but this is not of relevance. 
+Taking GIS as the reference, from all classifications, the hmeans cluster has the highest X-squared value and thus seems to be closest to the GIS classification. Interestingly, kmeans is closer to the speed classification.  
+
+Lets check these results visually: 
+```{r}
+tmap_arrange(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map )
+
+```
+- Category Standing was not Identified with either of the clustering methods.
+- the "undefined" category is the same in both clustering methods, and seems to consist of points with high sinuosity or points where data nearby is missing (NA). No time for further investigation.
+- Differentiation between bike&tram was not possible. 
+
+#  Correlation as alternative?
+(Wenn noch Zeit und Böcke)
+
+
+_______________________
 
 Kontrollgruppe (GIS)  und Clustergruppen 
 H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
@@ -254,19 +292,9 @@ traj1_traj3_groups |>
 chisq.test(c_ward_5,GIS_Group)
 
 ```
+_________
 
-
-
-#### chi square test
-```{r}
-#chi_man_k4
-```
-Hier kommt eine sehr niedrige Signifikanz raus, das heisst, die beiden clustermethoden sind sehr unterschiedlich. Warum? Weil sie nicht die gleichen Werte für die gleichen Cluster nehmen. Es ist also notwendig, erst die cluster visuell zu überprüfen abzugleichen und dann zuzuweisen, und dann den Test zu wiederholen. 
-Oder wir probieren es mit Korrelation
-
-
-
-#### t test mit rID Segmentierung (WAS IST DAS NOCHMAL? )
+#### t test mit rID Segmentierung (WAS IST DAS NOCHMAL? RAUSLASSEN? )
 
 Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test ohne rID segmentierung, das heisst die Gruppenzuweisungen sind sich mit rID segmentierung ähnlicher.
 
@@ -274,9 +302,13 @@ Erwartetes Ergebnis: der p Wert ist höher, d.h. unsignifikanter als bei t-test 
 
 ## Discussion
 
-It was observed that clustering with single tracks works better than clustering with all tracks. Therefor, the applicability of this method is questionable for bigger datasets or datasets with different movement patterns. 
-Furthermore, it needs to be mentioned that for thevalidation with GIS, the  speed information was used as a control. Therefore, independent control of cluster quality  cannot be guaranteed. 
+We could statistically prove that the hmean clustering method could better predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the twom classes, did not seem to have an effect. 
 
+... BEARBEITEN
+
+
+It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. 
+Furthermore, it needs to be mentioned that for the validation with GIS, the  speed information was used as a control. Therefore, independent control of cluster quality  cannot be guaranteed. 
 
 
 

@@ -252,6 +252,7 @@ library(clue)
 km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
 
 
+
 #  running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
 km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
 km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
@@ -272,6 +273,7 @@ plot_cluster_5_100 <- fviz_cluster(km_5_100, data = km_all_scaled)+
 #  Add the k clusters to the original data frame
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans4 = km_4$cluster) 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5 = km_5$cluster) 
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5_20 = km_5_20$cluster) 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5_100 = km_5_100$cluster) 
 # we dont include k=2, as it does not make sense. 
 
@@ -334,7 +336,8 @@ speed_map <- tm_shape(selected_tracks_na_omit)+
 
 #speed parameter  classification
 cluster_speed_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "speed_cluster", palette = "Paired")
+  tm_dots(col = "speed_cluster_name", palette = "Paired")+ 
+  tm_view(set.view = c(8.520515, 47.388322,  16))
 
 # smoothed speed parameter  
 selected_tracks_na_omit <- selected_tracks_na_omit %>%
@@ -345,11 +348,27 @@ cluster_smoothed_map <- tm_shape(selected_tracks_na_omit)+
 
 # GIS map 
 cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "GIS_name", palette = "Paired")
+  tm_dots(col = "GIS_name", palette = "Paired")+
+  tm_view(set.view = c(8.520515, 47.388322,  16))
+
 
 # k means maps
 cluster_k5_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5", palette = "Paired")
+
+selected_tracks_na_omit <- selected_tracks_na_omit |> 
+  mutate(k5_names  = case_when(
+    kmeans5 == "1" ~ "walking",
+    kmeans5 == "2" ~ "running",
+    kmeans5 == "3" ~ "biking",
+    kmeans5 == "4" ~ "standing",
+    kmeans5 == "5" ~ "undefined",
+         ))
+cluster_k5names_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "k5_names", palette = "Paired")
+
+cluster_k5_20_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5_20", palette = "Paired")
 
 cluster_k5_100_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5_100", palette = "Paired")
@@ -365,36 +384,59 @@ cluster_h4_ward <- tm_shape(selected_tracks_na_omit)+
 cluster_h5_ward <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "c_ward_5", palette = "RdYlGn")
 
+selected_tracks_na_omit <- selected_tracks_na_omit |> 
+  mutate(hward_names  = case_when(
+    c_ward_5 == "1" ~ "running",
+    c_ward_5 == "2" ~ "undefined",
+    c_ward_5 == "3" ~ "biking/tram",
+    c_ward_5 == "4" ~ "walking",
+    c_ward_5 == "5" ~ "standing",
+  ))
+cluster_h5_names_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "hward_names", palette = "Paired")
+
 
 #### Verification #####
 
 ##### Chi square #####
+# list of tables to compare
+tables_list <- list(
+  GIS_speed = table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$GIS_number),
+  GIS_kmeans = table(selected_tracks_na_omit$GIS_number, selected_tracks_na_omit$kmeans5),
+  GIS_hmeans = table(selected_tracks_na_omit$GIS_number, selected_tracks_na_omit$c_ward_5),
+  speed_hmeans = table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$c_ward_5),
+  speed_kmeans = table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$kmeans5),
+  hmeans_kmeans = table(selected_tracks_na_omit$c_ward_5, selected_tracks_na_omit$kmeans5)
+)
 
-# chi square is for two or more  independent nominal groups - is this the case?
-#chat gpt Chi square example: 
-# Erstellen einer Beispiel-Datenrahmen
-set.seed(123)
-Cluster1 <- sample(1:5, 100, replace = TRUE)
-Cluster2 <- sample(1:5, 100, replace = TRUE)
-Cluster3 <- sample(1:5, 100, replace = TRUE)
-df <- data.frame(Cluster1, Cluster2, Cluster3)
+# Funktion zum Durchführen des Chi-Quadrat-Tests
+perform_chisq_test <- function(tbl) {
+  chisq.test(tbl)
+}
 
-# Erstellen einer Kontingenztabelle
-table_12 <- table(df$Cluster1, df$Cluster2)
-table_13 <- table(df$Cluster1, df$Cluster3)
-table_23 <- table(df$Cluster2, df$Cluster3)
+# Chi-Quadrat-Tests für alle Tabellen durchführen
+chi_tests <- lapply(tables_list, perform_chisq_test)
 
+# Ergebnisse anzeigen
+chi_tests
+
+# extract values from chi_tests
+extract_chisq_results <- function(test_result) {
+  c(X_squared = test_result$statistic,
+    df = test_result$parameter,
+    p_value = test_result$p.value)
+}
+results_df <- as.data.frame(do.call(rbind, lapply(chi_tests, extract_chisq_results)))
+
+
+#alte, unnötige
 table_man_k4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$kmeans4)
 table_ward_h4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$c_ward_4)
 table_single_h4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$c_single_4)
 
 # Chi-Quadrat-Test
-chi_12 <- chisq.test(table_12)
-chi_13 <- chisq.test(table_13)
-chi_23 <- chisq.test(table_23)
 
 chi_man_k4 <- chisq.test(table_man_k4)
-
 chi_ward_h4 <- chisq.test(table_ward_h4)
 chi_single_h4 <- chisq.test(table_single_h4)
 # --> we always can only compare one clustering method with one other.
