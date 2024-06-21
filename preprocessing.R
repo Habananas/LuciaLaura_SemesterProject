@@ -23,7 +23,8 @@ library(cluster)#kmeans
 library(zoo) # for sinuosity
 #install.packages("vegan")
 library(vegan) # for k means partitioning
-
+#install.packages("gridExtra")
+library("gridExtra") #for displaying several plots at the time with grid.arrange()
 
 
 
@@ -103,11 +104,11 @@ all_tracks <- all_tracks |>
   mutate(trajID = rle_id(rec_id))
 summary(all_tracks)
 
-# choose exemplary trajectories (of mixed movement)  (or not, if we already did in before step)
-trajIDs <- c(1, 3) #now, we just have the tracks that interest us, therefore we just select all.
-
+# choose exemplary trajectories (of mixed movement)  
+trajIDs <- c(1, 3) 
 selected_tracks <- all_tracks |> 
   filter(trajID %in% trajIDs)
+#now, we just have the tracks that interest us
 
 
 #### calculation of parameters ####
@@ -145,13 +146,6 @@ selected_tracks <- selected_tracks |>
     sinuosity = d_sinu10/d_direct10   ) |> 
   ungroup()
 
-#maps parameters (still not NA omit!)
-speed_map <- tm_shape(selected_tracks)+
-  tm_dots(col = "speed_kmh", palette = "RdYlGn") +
-  tm_view(set.view = c(8.520515, 47.388322,  16))
-
-elevation_map <- tm_shape(selected_tracks)+
-  tm_dots(col = "el_change", palette = "RdYlGn") 
 
 
 ##### NA omit and Drop Geom  #####
@@ -160,7 +154,7 @@ selected_tracks_na_omit <- na.omit(selected_tracks)
 
 # filter out selected values and geometry for cluster analysis (important to first NA omit, then  drop geometry)
 km_no_geom <- selected_tracks_na_omit |> 
-  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
+  select(distance, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |> 
   st_drop_geometry()
 #scale the values 
 km_all_scaled <- km_no_geom %>%
@@ -169,20 +163,29 @@ km_all_scaled <- km_no_geom %>%
 ##### Classification with speed  #####
 
 selected_tracks_na_omit  <- selected_tracks_na_omit  |>
-  mutate(manual_cluster = case_when(
+  mutate(speed_cluster = case_when(
     speed_kmh == 0 ~ "1", #standing
     speed_kmh < 5 ~ "2", #walking
     speed_kmh >= 5 & speed_kmh < 18 ~ "3",  #running
-    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # biking 
-    speed_kmh < 30 ~ "5" # tram
-  ))
+    speed_kmh >= 18 & speed_kmh < 30 ~ "4", # biking 
+    speed_kmh > 30 ~ "5" # tram 
+    ),
+    speed_cluster_name = case_when(
+      speed_cluster == 1 ~ "standing",
+      speed_cluster == 2 ~ "walking",
+      speed_cluster == 3 ~ "running",
+      speed_cluster == 4 ~ "biking",
+      speed_cluster == 5 ~ "tram"
+    )
+    ) 
+
 
 ##### LEAVE OUT transformation of unevenness in the manual clustering  #####
 
-selected_tracks_na_omit <- selected_tracks_na_omit  |> 
+"selected_tracks_na_omit <- selected_tracks_na_omit  |> 
   mutate(
     transformed_values = slide_dbl(
-      as.numeric(manual_cluster),
+      as.numeric(speed_cluster),
       ~ ifelse(
         .x != lag(.x, default = .x[1]) & .x != mode(.x),
         1,
@@ -192,7 +195,7 @@ selected_tracks_na_omit <- selected_tracks_na_omit  |>
       after = 5,
       .complete = TRUE
     )
-  )
+  )"
 
 
 
@@ -207,44 +210,70 @@ selected_tracks_na_omit |>
   write_csv( file = "data/traj1_traj3")
 #was done in ArcGIS, and CSV was reimported. 
 traj1_traj3_mit_Zuordnung <- read_csv("traj1_traj3_mit_Zuordnung.csv")
-#assign values according to the ones in speed classification
-traj1_traj3_mit_Zuordnung <- traj1_traj3_mit_Zuordnung |> 
-  mutate(GIS_group = case_when(
-    GIS_Group == "standing" ~ "1",
-    GIS_Group == "walking" ~ "2",
-    GIS_Group == "running" ~ "3",
-    GIS_Group == "biking" ~ "4",
-    GIS_Group == "tram" ~ "5",
-  ))
 
 # Add the GIS class to the original data frame
-selected_tracks_na_omit<- cbind(selected_tracks_na_omit, GIS_group = traj1_traj3_mit_Zuordnung$GIS_group) 
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, GIS_name = traj1_traj3_mit_Zuordnung$GIS_Group) 
+
+#assign values according to the ones in speed classification
+selected_tracks_na_omit <- selected_tracks_na_omit |> 
+  mutate(GIS_number = case_when(
+    GIS_name == "standing" ~ "1",
+    GIS_name == "walking" ~ "2",
+    GIS_name == "running" ~ "3",
+    GIS_name == "biking" ~ "4",
+    GIS_name == "tram" ~ "5",
+  ))
+
 
 
 #### k-means Analysis #### 
 
 ##### Find the right amount of clusters #####
+#(several intents, with elevation and sinuosity and without, but it always gets to 2 -3 clusters only. )
 
-# elbow method 
 plot_k_elbow <- fviz_nbclust(km_all_scaled, kmeans, method = "wss") #takes 3 mins to calculate, gives 5 clusters
-#interesting: the "elbow"/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
 
 # cascade method
-KM.cascade <- cascadeKM(km_all_scaled,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = "ssi")
+KM.cascade <- cascadeKM(km_all_scaled,  inf.gr = 2, sup.gr = 8, iter = 100, criterion = "ssi")
 summary(KM.cascade)
 cascade_results <- KM.cascade$results #SSI 
-cascade_results 
+
 
 
 ##### apply k means #####
 set.seed(1)
+km_2 <- kmeans(km_all_scaled, 2)
 km_4 <- kmeans(km_all_scaled, 4)
 km_5 <- kmeans(km_all_scaled, 5)
+
+# Match cluster IDs
+install.packages("clue")
+library(clue)
+km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
+
+
+#  running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
+km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
+km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
+#plots for the cluster ditribution
+plot_cluster_4 <- fviz_cluster(km_4, data = km_all_scaled)
+
+plot_cluster_5 <- fviz_cluster(km_5, data = km_all_scaled)+
+  ggtitle("Cluster k=5 no n defined")
+
+plot_cluster_5_20 <- fviz_cluster(km_5_20, data = km_all_scaled)+
+  ggtitle("Cluster k=5 n=20")
+
+plot_cluster_5_100 <- fviz_cluster(km_5_100, data = km_all_scaled)+
+  ggtitle("Cluster k=5 n=100")
+
+
 
 #  Add the k clusters to the original data frame
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans4 = km_4$cluster) 
 selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5 = km_5$cluster) 
-
+selected_tracks_na_omit<- cbind(selected_tracks_na_omit, kmeans5_100 = km_5_100$cluster) 
+# we dont include k=2, as it does not make sense. 
 
 #### h means Analysis ####
 hm_all_scaled <- km_no_geom %>%
@@ -297,11 +326,15 @@ P_ward_4<- selected_tracks_na_omit |>
 #### Output Maps ####
 
 tmap_mode("view")
-tm_view(set.view = c(8.524527, 47.390118,  16))
 
-#speed parameter   
+speed_map <- tm_shape(selected_tracks_na_omit)+
+  tm_dots(col = "speed_kmh", palette = "-RdYlGn") + #das minus vor der Palette invertiert den normalen Farbverlauf
+  tm_view(set.view = c(8.520515, 47.388322,  16))
+
+
+#speed parameter  classification
 cluster_speed_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "manual_cluster", palette = "RdYlGn")
+  tm_dots(col = "speed_cluster", palette = "Paired")
 
 # smoothed speed parameter  
 selected_tracks_na_omit <- selected_tracks_na_omit %>%
@@ -310,12 +343,19 @@ selected_tracks_na_omit <- selected_tracks_na_omit %>%
 cluster_smoothed_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "transformed_values_char", palette = "RdYlGn")
 
+# GIS map 
+cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "GIS_name", palette = "Paired")
+
 # k means maps
 cluster_k5_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "kmeans5", palette = "RdYlGn")
+  tm_dots(col = "kmeans5", palette = "Paired")
+
+cluster_k5_100_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "kmeans5_100", palette = "Paired")
 
 cluster_k4_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "kmeans4", palette = "RdYlGn")
+  tm_dots(col = "kmeans4", palette = "Paired")
 
 # h means maps
 
@@ -346,9 +386,9 @@ table_12 <- table(df$Cluster1, df$Cluster2)
 table_13 <- table(df$Cluster1, df$Cluster3)
 table_23 <- table(df$Cluster2, df$Cluster3)
 
-table_man_k4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$kmeans4)
-table_ward_h4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$c_ward_4)
-table_single_h4 <- table(selected_tracks_na_omit$manual_cluster, selected_tracks_na_omit$c_single_4)
+table_man_k4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$kmeans4)
+table_ward_h4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$c_ward_4)
+table_single_h4 <- table(selected_tracks_na_omit$speed_cluster, selected_tracks_na_omit$c_single_4)
 
 # Chi-Quadrat-Test
 chi_12 <- chisq.test(table_12)
@@ -364,7 +404,7 @@ chi_single_h4 <- chisq.test(table_single_h4)
 
 # FISHERS TEST
 only_clusters <- selected_tracks_na_omit |> 
-  dplyr::select(manual_cluster, kmeans4, kmeans5) |> 
+  dplyr::select(speed_cluster, GIS_number,  kmeans4, kmeans5) |> 
   st_drop_geometry()
 
 
@@ -374,9 +414,9 @@ only_clusters <- selected_tracks_na_omit |>
 
 
 #cor.test(selected_tracks_na_omit$clusterGIS, df$clusterk, method = "pearson") # this one not, as it as linearity as condition
-cor.test(as.numeric(selected_tracks_na_omit$manual_cluster), as.numeric(selected_tracks_na_omit$kmeans4),  method = "spearman") 
+cor.test(as.numeric(selected_tracks_na_omit$speed_cluster), as.numeric(selected_tracks_na_omit$kmeans4),  method = "spearman") 
 
-class(selected_tracks_na_omit$manual_cluster)
+class(selected_tracks_na_omit$speed_cluster)
 
 cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,method = "kendall")
 

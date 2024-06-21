@@ -59,17 +59,16 @@ Auch reinbringen?:
 ### Data
 The data sample consists of movement data collected with the Tracking App Strava, by two individuals over a timespan of April - May 2024.
 Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the  design and to be able to focus on the application of the clustering methods, a sample of 2 trips with different movement types within the trajectory were selected to be analyzed.
-Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train). 
+Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g. in a train).
+At first, including contextual data such as traffic infrastructure data by the city of Zurich ( [https://www.stadt-zuerich.ch/geodaten/](#0){.uri}) was considered. Out of two reasons, it was decided not to include this data: 1) categorical data is not suitable for the evaluation with the k-means clustering algorithm and 2) the infrastructure data dit not overlap with the trajectories in many cases and was therefore not especially meaningful. Therefore, the focus was set on the analysis of the numerical data.
 
-At first, it was considered to include contextual data such as traffic infrastructure data by the city of Zurich ( [https://www.stadt-zuerich.ch/geodaten/](#0){.uri}), however these are categorical data and are therefore not suitable for the evaluation with the k-means clustering algorithm.
 
+### Classification of travel modes   
 
-### Clustering 
+The analysis was made with data of the individual fixes. instead of using segments for the analysis of e.g. acceleration, the data of moving windows ( X steps before and after the fix) was assigned to the individual fix. This was done to have more information for each fix (data point). 
 
-Some of the trajectories include several travel modes. The aim of this project is to verify if it is possible to detect different travel modes within one trajectory using clustering. 
-To determine the number of clusters needed, the trajectory data is analysed with   (functions).  
-5 different travel modes could be identified in the samples (walking, running, tram, bike, train), therefore the optimal number of clusters expected is 5. 
-Space and time of trajectories were treated to be relative and are filtered out for the analysis.
+5 different travel modes could be identified in the samples (standing, walking, running, tram, biking), therefore the optimal number of clusters expected is 5, which is also the number of classes assigned in GIS and with the speed parameter. Also, the trajectory data will be analysed with partitioning methods to determine the number of clusters needed, and results will be compared.
+Space and time of trajectories were treated to be relative and are filtered out for the analysis. 
 The parameters for clustering will be calculated from the given geographical data and include:
 - distance point1 - point2
 - speed p1 - p2
@@ -92,40 +91,31 @@ There are several ways to deal with this problem:
 
 The third method was chosen, resulting in the lowest sinuosity value possible (=1).
 
-
 #### Classification via threshold  
 
-
-The following segmentation was made: (vllt lieber decision tree statt den code?)
-```{r}
-selected_tracks  <- selected_tracks  |>
-  mutate(manual_cluster = case_when(
-    speed_kmh == 0 ~ "1", #standing
+In order to verify how well speed alone can already predict the different movement types, a classification was made based on speed as the only criterion. The different travel modes were assigned to different speeds where 
+ speed_kmh == 0 ~ "1", #standing
     speed_kmh < 5 ~ "2", #walking
     speed_kmh >= 5 & speed_kmh < 18 ~ "3",  #running
-    speed_kmh >= 18 & speed_kmh >= 30 ~ "4", # velo 
-    speed_kmh < 30 ~ "5" # tram
-  ))
-```
-Problem: 
-inhomogenous segments, bc the threshold is set at a point where it varies constantly (e.g. speed>5 = running, speed<5 = walking - differs constantly )
-Resolving with manual classification in GIS.
+    speed_kmh >= 18 & speed_kmh < 30 ~ "4", # velo 
+    speed_kmh > 30 ~ "5" # tram
+
+The encountered problem was the unhomogenity of some fixes, e.g. when the threshold is set at a point where the speed varies constantly (e.g. speed>5 = running, speed<5 = walking)
+This issue was resolved with manual classification in GIS.
+
 
 ### Verification with manual classification in GIS
 
-In Order to test the results of our cluster analysis, it was aimed to assess in how far the cluster categories are consistent with the actual movement types conducted during the trajectory recordings. This required two independent enrichments of the fix point data. In one step, the information of the actual movement type had to be added to the single trajectory fixes by using the recorder's knowledge of the track. This step was conducted within ArcGis (Tools: Select and Calculate Field). To help the recognition of movement type change, the fix points were colored using the speed (km/h) variable.  
+In order to test the results of our cluster analysis, it was aimed to assess in how far the cluster categories are consistent with the actual movement types conducted during the trajectory recordings. This required two independent enrichments of the fix point data. In one step, the information of the actual movement type had to be added to the single trajectory fixes by using the recorder's knowledge of the track. This step was conducted within ArcGis (Tools: Select and Calculate Field). To help the recognition of movement type change, the fix points were colored using the speed (km/h) variable.  
 In another step, the individual cluster groups were inspected visually and statistically to find out which movement they are likely to represent.
 
-
-```{r}
-#map von GIS  
-```
-
-
 #### kmeans
-
-K means is one of the most commonly used partition based algorithms (@yuan2017review), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster.
-Initially, a k-means algorithm should have been used that takes categorical (such as infrastructure data) and numerical variables into account, however this was not possible with the k-mode() function, and also, the infrastructural data taken into account was not overlapping with the trajectories in all cases. Therefore, the focus was set on the analysis of the numerical data.
+K means is one of the most commonly used partition based algorithms (@yuan2017review), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster. 
+First, partitioning (determining the appropriate  number of k) is carried out using the elbow method from the package factoextra ([https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method](#0){.uri}) and the cascade method from the package vegan.  
+All parameters included in the clustering analysis are numerical:
+```{r}
+head(km_no_geom, 5)
+``` 
 
 
 #### hmeans
@@ -135,74 +125,74 @@ chaining erklären (deshlab ward am besten)
 
 
 ## Results
+FEHLER: WARUM ERSCHEINT ein 3ter Track im Label (aber dann nicht auf der Map)?
 
-2 trajectories were chosen which include several travel modes. 
-
+2 trajectories were chosen which include several travel modes. Trip 1 is a mixture of walking, running, tram and standing (at the tram stop). Trip 2 consists of biking, walking and standing. 
 ```{r}
 tmap_mode("view")
-tm_shape(selected_tracks)+ 
-  tm_dots(col = "trajID", palette = "Paired") +
-  tm_view(set.view = c(8.524527, 47.390118,  16))
+tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "trajID", palette = "Paired") +  
+  tm_view(set.view = c(8.520515, 47.388322,  16))
 
 ```
-### parameters
+
+### Speed and Speed Classification
 
 ```{r}
-tm_shape(selected_tracks)+
-  tm_dots(col = "speed_kmh", palette = "RdYlGn") 
+tmap_arrange(speed_map, cluster_speed_map )
 
-tm_shape(selected_tracks)+
-  tm_dots(col = "el_change", palette = "RdYlGn") 
-
-
-tm_shape(selected_tracks)+
-  tm_dots(col = "manual_cluster", palette = "RdYlGn",
-          n =3 ,
-          breaks = seq(1, 3, by = 0.1)) 
 ```
+
+### Speed parameter Classification and GIS Classification
+
+```{r}
+#| fig-cap: "Map of the manually assigned groups and the Speed parameter Classification"
+#| label: GIS_Group and manual
+
+  tmap_arrange(cluster_speed_map, cluster_GIS_map )
+```
+Looking at the two 
 
 ### k means  (non hierarchical clustering)
 
-#### partitioning 
-There are severeal methods to define the appropriate amount of clusters for kmeans, one of them being the elbow method (https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method) and anotherone the Gap Statistic Method. 
-Using the fviz_nbclust() function from the factoextra package, the right amount of clusters was identified. 
-
+#### Partitioning 
+In order to define the appropriate number of clusters, the elbow statistics is used. The  bend (like a bent elbow) in the line indicates  the number of appropriate k. 
 ```{r}
 plot_k_elbow
 
 ```
-In the elbow statistic, the best amount of clusters seems to be 2(???), as the curve starts to bend there.  
-
-```{r}
-#plot_k_gapstat #processing takes very long... therefore left out
-```
-We tried gapstat, but it took to long  to calculate. 
-Another method is the cascade (SOURCE LUCIA).
+This method indicates that the best amount of clusters seems to be 2, as the curve starts to bend there. The method was tried with several configurations (different n-starts, leaving out parameters like elevation or sinuosity, taking one track only), but the indicated number for k stayed the same.
+As this does not correspond to the actual amount of clusters we want to find, we try a different method, the cascade (SOURCE LUCIA). Here, we examine the suitability from 2-8 cluster groups.
 The SSE (sum of squared errors) is a measure of how well the data points are summarized within the clusters. The lower, the better the clustering. In the ssi (silhouette index) the higher the value (from -1 to 1) the better the clustering.
 ```{r}
 cascade_results
 ```
-The SSE is lowest for 5 clusters, which indicates good clustering, and also the ssi is highest in 5 clusters. 
-Therefore, we try k means with 4 and 5 clusters. 
+The ssi is highest for 5 groups, while the SSE decreases constantly with the rising number of groups. This indicates, that a well chosen amount of k is 5. 
 
-#### applying k means 
-We left out the n start criterion -> but would have liked to bring in if more time, as running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
+#### applying k means
+
+The importance of the nstart criterium in the kmeans analysis is not to underestimate. In the following graphic, we can see the different results when using no predetermined n, n=20 and n=100.
 ```{r}
-tm_shape(selected_tracks_na_omit)+
-  tm_dots(col = "kmeans4", palette = "RdYlGn") 
+grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3)
+
 ```
-das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. 
+Here we can see the classification of the sample points in the point cloud, how many data points belong to which cluster. From this, it is not yet possible to determine which cluster might correspond to which travel mode and which n suits our classification best. 
+
+```{r}
+tmap_arrange( cluster_k5_map, cluster_k5_100_map )
+```
+Looking at the two clusters k=5 and k5 n=100, we can see that the distribution of clusters is very similar, different to what the plots before indicated. 
+However, the clustering does not seem to 
+and das cluster klappt noch ziemlich schlecht, es clustert zB die standing points gleich wie das laufen. 
 Und Strassenbahn und Fahrrad sind ebenfalls gleich
 
-Changing the cluster number to 5:
+
 ```{r}
-tm_shape(selected_tracks_na_omit)+
-  tm_dots(col = "kmeans5", palette = "RdYlGn") 
-
+cluster_k4_map
 ```
-Und auch Kurven mit dem Fahrrad sieht es nicht als solche, sondern klassifiziert sie anders. 
+Changing to k=4, running, walking and a third category can be relatively clearly distinguished, however there is no distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. 
 
-###  hmeans (hierarchical  clustering)
+###  hmeans (hierarchical  clustering)(LUCIA)
 meaning that e.g. cluster bike is closer to running and tram is closer to train 
 
 ```{r}
@@ -213,14 +203,13 @@ ward_dendro
 ```{r}
 P_ward_4
 
-tmap_arrange(cluster_h_map, cluster_manual_map,cluster_k_map )
+tmap_arrange(cluster_h_map,cluster_k_map )
 
 ```
 Works well with differentiation between running and walking, but nbike and tram look the same. 
 ### Verification
 
-- wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
-
+wir wollen wissen, ob alle punkte, die im GIS cluster den wert 5 haben, im k-cluster den entsprechenden Wert zB 3 haben. Mit welcher verification method? 
 
 Kontrollgruppe (GIS)  und Clustergruppen 
 H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
