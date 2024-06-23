@@ -418,6 +418,36 @@ therefore leave out the k=4.
 
 ### hclust Cluster
 
+###  Hierarchical clustering (hclust)
+
+The result of the h-clustering process is a tree of clusters which shows how the different clusters are related to eachother. 
+
+```{r, dendogram}
+par(mfrow = c(1, 3))
+plot(hc_single, main = "Single", labels = NULL, sub = NULL)
+plot(hc_complete, , main = "Complete")
+plot(hc_ward, main = "Ward")
+
+par(mfrow = c(1,1))
+```
+
+Depending on the input data and the question asked, the cluster can be split at different cluster levels. In our case, the cluster level of 5 is a sensible choice when considering the amount of different movement types between which we would like to distinguish. Looking at the resulting summary of the fix point distribution among the five clusters, it became apparent, that the Ward method is the only method which was able to create spherical clusters of reasonable sizes. 
+
+```{r, cluster summary}
+summary_table_hclust 
+```
+
+Since in the given tracks, the movement types were easily practiced for more than a minute, we would expect there to be more than 60 fixes per movement type cluster. As the table above shows, the clusters from the single and complete method cannot account for this distribution. This is most likely due to the effect of chaining, where single observations are considered different from all other observations. This can also be observed in the given dendrograms.  In the following, we will thus only consider the results from the ward cluster. 
+
+```{r}
+#P_ward_4
+
+#tmap_arrange(cluster_h5_ward,cluster_k5_map )
+
+```
+Works well with differentiation between running and walking, but bike and tram look the same. 
+
+
 meaning that e.g. cluster bike is closer to running and tram is closer
 to train
 
@@ -530,6 +560,8 @@ cluster_GIS_map
 -   Differentiation between bike&tram was not possible.
 
 ## Discussion
+
+chaining
 
 The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important
 factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect. 

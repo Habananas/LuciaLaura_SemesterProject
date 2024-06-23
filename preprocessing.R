@@ -27,7 +27,8 @@ library(zoo) # for sinuosity
 library(vegan) # for k means partitioning
 #install.packages("gridExtra")
 library("gridExtra") #for displaying several plots at the time with grid.arrange()
-
+#install.packages("maptiles")
+library(maptiles)
 
 
 #### Data Loading and Organisation #### 
@@ -287,38 +288,41 @@ hc_ward <- hclust(dist_matrix, method = "ward.D")
 hc_single <- hclust(dist_matrix, method = "single")
 hc_complete <- hclust(dist_matrix, method = "complete")
 
-# Cut the tree into a desired number of clusters (4 (with three different methods) and 5 clusters)
-clust_ward_4 <- cutree(hc_ward, k = 4)
-clust_single_4 <- cutree(hc_single, k = 4)
-clust_complete_4 <- cutree(hc_complete, k = 4)
-#complete and single are left out for further analysis, bc they do not make appropriate assignation of datapoints to clusters as visible in summary (chaining)
-# c-ward cluster repeated with 5 clusters 
+# Cut the tree into a desired number of clusters (5 clusters)
 clust_ward_5 <- cutree(hc_ward, k = 5)
+clust_single_5 <- cutree(hc_single, k = 5)
+clust_complete_5 <- cutree(hc_complete, k = 5)
+#complete and single do not make appropriate assignation of datapoints to clusters as they are chaining. ALso visible in summary.
 
 # Add the clusters to the original data frame
-selected_tracks_na_omit$c_ward_4<- as.factor(clust_ward_4)
-selected_tracks_na_omit$c_single_4<- as.factor(clust_single_4)
-selected_tracks_na_omit$c_compl_4<- as.factor(clust_complete_4)
+selected_tracks_na_omit$c_single_5<- as.factor(clust_single_5)
+selected_tracks_na_omit$c_compl_5<- as.factor(clust_complete_5)
 selected_tracks_na_omit$c_ward_5<- as.factor(clust_ward_5)
 
 # Distribution of points among clusters
-summary(selected_tracks_na_omit$c_ward_4)
-summary(selected_tracks_na_omit$c_single_4)
-summary(selected_tracks_na_omit$c_compl_4)
-summary(selected_tracks_na_omit$c_ward_5)
+single_5 <- summary(selected_tracks_na_omit$c_single_5)
+complete_5 <- summary(selected_tracks_na_omit$c_compl_5)
+ward_5 <- summary(selected_tracks_na_omit$c_ward_5)
 # we wont take into consideration single and complete, as the cluster distribution is not suitable (see chaining).
 
-# Track split into 4 & 5 clusters
-ward_plot_4 <- plot(clust_ward_4, main = "Ward")
+summary_table_hclust <- data.frame(
+  single = single, complete = complete, ward = ward) |> 
+  t() |>  as.data.frame() # transpose the data so that columns become rows.
+
+# How individual points are distributed on track 
 ward_plot_5 <- plot(clust_ward_5, main = "Ward")
 
 # Dendrogramm of cluster result
-ward_dendro <- plot(hc_ward, main = "Ward") 
+par(mfrow = c(1, 3))
+plot(hc_single, main = "Single", labels = NULL, sub = NULL)
+plot(hc_complete, , main = "Complete")
+plot(hc_ward, main = "Ward")
 
 # plot results
-P_ward_4<- selected_tracks_na_omit |> 
+tmap_mode("plot")
+P_ward_5<- selected_tracks_na_omit |> 
   tm_shape() +
-  tm_dots(size = 0.05, col = "c_ward_4") 
+  tm_dots(size = 0.06, col = "c_ward_5") 
 # fast to compute, good differentiation
 
 #### Output Maps ####
@@ -466,7 +470,7 @@ cor.test(as.numeric(selected_tracks_na_omit$speed_cluster), as.numeric(selected_
 
 class(selected_tracks_na_omit$speed_cluster)
 
-cor.test(as.numeric(selected_tracks_na_omit$clusterGIS), as.numeric(selected_tracks_na_omit$clusterk),method = "kendall")
+#cor.test(as.numeric(selected_tracks_na_omit$clusterGIS), as.numeric(selected_tracks_na_omit$clusterk),method = "kendall")
 
 
 ##### save the image of everything #####
