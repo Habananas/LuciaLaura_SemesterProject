@@ -232,7 +232,7 @@ We will compare:
 ```{r}
 chi_tests
 ```
-X-squared: This is the value of the chi-squared statistic. The larger χ 2, the more likely that the variables are related.
+X-squared: This is the value of the chi-squared statistic. The larger χ2, the more likely that the variables are related.
 
 df: This is the number of degrees of freedom. It is typically calculated as (number of rows-1)×(number of columns-1) in the contingency table.
 
@@ -256,43 +256,6 @@ tmap_arrange(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map )
 #  Correlation as alternative?
 (Wenn noch Zeit und Böcke)
 
-
-_______________________
-
-Kontrollgruppe (GIS)  und Clustergruppen 
-H0: Die Gruppenzuordnungen (Cluster) sind gleich bei Kontroll und Clustergruppen
-H1: Die Gruppenzuordnungen (Cluster) sind ungleich bei Kontroll und Clustergruppen
-
-```{r}
-# load enriched fixpoint data from ArcGIS export (preprocessing?)
-library(sf)
-traj1_traj3_groups <- read_delim("data/GIS_Zuordnung/traj1_traj3_mit_Zuordnung.csv", delim = ",") |>  st_as_sf(coords = c("x", "y"), crs = 2056)
-str(traj1_traj3_groups)
-
-# visually inspect clusters for fitting movement type
-tmap_mode("view")
-
-traj1_traj3_groups |>  
-  tm_shape() +
-  tm_dots(col = "c_ward_5", style="cat") + 
-  tm_facets(by = "trajID")
-
-# assign movement types with presumed cluster type
-traj1_traj3_groups <- traj1_traj3_groups |> 
-  mutate(GIS_eq_ward5 = case_when(
-    GIS_Group == "standing" ~ 5,
-    GIS_Group == "walking" ~ 4,
-    GIS_Group == "running" ~ 1,
-    #GIS_Group == "running" ~ 2,
-    GIS_Group == "biking" ~ 3,
-    GIS_Group == "tram" ~ 3))
-
-#perform comparision (chi.squr) of movement types with presumably fitting cluster types
-traj1_traj3_groups |> 
-chisq.test(c_ward_5,GIS_Group)
-
-```
-_________
 
 #### t test mit rID Segmentierung (WAS IST DAS NOCHMAL? RAUSLASSEN? )
 

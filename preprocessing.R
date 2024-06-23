@@ -224,8 +224,6 @@ selected_tracks_na_omit <- selected_tracks_na_omit |>
     GIS_name == "tram" ~ "5",
   ))
 
-
-
 #### k-means Analysis #### 
 
 ##### Find the right amount of clusters #####
@@ -239,23 +237,21 @@ summary(KM.cascade)
 cascade_results <- KM.cascade$results #SSI 
 
 
-
 ##### apply k means #####
 set.seed(1)
 km_2 <- kmeans(km_all_scaled, 2)
 km_4 <- kmeans(km_all_scaled, 4)
 km_5 <- kmeans(km_all_scaled, 5)
 
+#  running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
+km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
+km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
+
 # Match cluster IDs
 install.packages("clue")
 library(clue)
 km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
 
-
-
-#  running k-means multiple times with different random starts (specified by the nstart parameter) and choosing the best result helps avoid getting stuck in a poor local optimum. 
-km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
-km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
 #plots for the cluster ditribution
 plot_cluster_4 <- fviz_cluster(km_4, data = km_all_scaled)
 
@@ -295,9 +291,9 @@ hc_complete <- hclust(dist_matrix, method = "complete")
 clust_ward_4 <- cutree(hc_ward, k = 4)
 clust_single_4 <- cutree(hc_single, k = 4)
 clust_complete_4 <- cutree(hc_complete, k = 4)
-#complete and single are left out for k=5 bc they do not make appropriate assignation of datapoints to clusters as visible in summary
+#complete and single are left out for further analysis, bc they do not make appropriate assignation of datapoints to clusters as visible in summary (chaining)
+# c-ward cluster repeated with 5 clusters 
 clust_ward_5 <- cutree(hc_ward, k = 5)
-
 
 # Add the clusters to the original data frame
 selected_tracks_na_omit$c_ward_4<- as.factor(clust_ward_4)
@@ -339,18 +335,14 @@ cluster_speed_map <- tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "speed_cluster_name", palette = "Paired")+ 
   tm_view(set.view = c(8.520515, 47.388322,  16))
 
-# smoothed speed parameter  
-selected_tracks_na_omit <- selected_tracks_na_omit %>%
-  mutate(transformed_values_char = as.character(transformed_values))
-
-cluster_smoothed_map <- tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "transformed_values_char", palette = "RdYlGn")
+# smoothed speed parameter (transformed value creation is not run/evaluated above..)
+# selected_tracks_na_omit <- selected_tracks_na_omit %>% mutate(transformed_values_char = as.character(transformed_values))
+# cluster_smoothed_map <- tm_shape(selected_tracks_na_omit)+ tm_dots(col = "transformed_values_char", palette = "RdYlGn")
 
 # GIS map 
 cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "GIS_name", palette = "Paired")+
   tm_view(set.view = c(8.520515, 47.388322,  16))
-
 
 # k means maps
 cluster_k5_map <- tm_shape(selected_tracks_na_omit)+ 
@@ -364,6 +356,7 @@ selected_tracks_na_omit <- selected_tracks_na_omit |>
     kmeans5 == "4" ~ "standing",
     kmeans5 == "5" ~ "undefined",
          ))
+
 cluster_k5names_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "k5_names", palette = "Paired")
 
@@ -377,7 +370,6 @@ cluster_k4_map <- tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "kmeans4", palette = "Paired")
 
 # h means maps
-
 cluster_h4_ward <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "c_ward_4", palette = "RdYlGn")
 
@@ -464,8 +456,7 @@ cor.test(as.numeric(selected_tracks_na_omit$speed_cluster), as.numeric(selected_
 
 class(selected_tracks_na_omit$speed_cluster)
 
-cor.test(selected_tracks_na_omit$clusterGIS, selected_tracks_na_omit$clusterk,method = "kendall")
-
+cor.test(as.numeric(selected_tracks_na_omit$clusterGIS), as.numeric(selected_tracks_na_omit$clusterk),method = "kendall")
 
 
 ##### save the image of everything #####
