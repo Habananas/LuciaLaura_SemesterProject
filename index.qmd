@@ -26,7 +26,7 @@ library(tmap) #to show data in map viewer, is necesary in
 ## Abstract
 
 This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. 
-Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hmeans. Simultaneously, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare them to the clustering. 
+Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hmeans. Additionally, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare them to the clustering. 
 Verification took place using Chi square test and ANOVA ?????
 
 The results show that 
@@ -121,7 +121,11 @@ head(km_no_geom, 5)
 
 
 #### hmeans
-(LUCIA?)
+
+Instead of startin g
+- DIfference k-means vs. h-means
+- hierachial-clustering = hierachy of nested paritions, 
+
 
 chaining erklären (deshlab ward am besten)
 

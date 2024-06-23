@@ -248,11 +248,11 @@ km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
 km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
 
 # Match cluster IDs
-install.packages("clue")
-library(clue)
-km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
+# install.packages("clue")
+# library(clue)
+# km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
 
-#plots for the cluster ditribution
+#plots for the cluster distribution
 plot_cluster_4 <- fviz_cluster(km_4, data = km_all_scaled)
 
 plot_cluster_5 <- fviz_cluster(km_5, data = km_all_scaled)+
@@ -263,7 +263,6 @@ plot_cluster_5_20 <- fviz_cluster(km_5_20, data = km_all_scaled)+
 
 plot_cluster_5_100 <- fviz_cluster(km_5_100, data = km_all_scaled)+
   ggtitle("Cluster k=5 n=100")
-
 
 
 #  Add the k clusters to the original data frame
