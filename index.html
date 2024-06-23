@@ -8,7 +8,7 @@
 
 <meta name="author" content="Lucia Scheele and Laura Vetter">
 
-<title>A Travel Mode Detection approach based on hierarchical and non hierarchical clustering</title>
+<title>A Travel Mode Detection approach based on hierarchical and non-hierarchical clustering</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -99,7 +99,7 @@ div.csl-indent {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">A Travel Mode Detection approach based on hierarchical and non hierarchical clustering</h1>
+<h1 class="title">A Travel Mode Detection approach based on hierarchical and non-hierarchical clustering</h1>
 <p class="subtitle lead">Patterns and Trends in Environmental Data</p>
 </div>
 
@@ -140,9 +140,7 @@ div.csl-indent {
 </div>
 <section id="abstract" class="level2">
 <h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
-<p>This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hclust. Additionally, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare them to the clustering. Verification took place using Chi square test. It was found that ¨</p>
-<p>the amount of clusters - 5 clusters, which corresponds to the actual amount of travel modes (+standing) - hclust predicts better than kmeans - the ward method in hclust is better than single and - xxx showed a better (or equally good) result than manual classification. - Verification method - … BEARBEITEN</p>
-<p>TO CONSIDER: Interactive maps are only reasonable for small amounts of data (e.g.&nbsp;a few locations of a single wild boar). If you want to show a large amount of data, consider making a static map instead (using tmap_mode(“plot”)).</p>
+<p>This project aims to analyze travel behavior and clustering of travel segments by different clustering methods and visual analysis. Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hclust. Additionally, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare their results to the clustering. Verification took place using the Chi-square test. It was found that for the partinoning (choosing the amount of k), only one of the statistical tests coincided with the actual number of movement types (k=5). Furthermore, the results suggest that hclust provides a clustering that matches the ground truth better than k-means. Specifically, the ward method in hclust performs better than the single and complete method. It was not proven, that clustering shows a better (or equally good) result than manual classification in GIS. This is mainly due to a lack of differentiation between bike and tram movement, as well as a mis-classification of movement in turns (e.g.&nbsp;bike was classified as walking)</p>
 </section>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
@@ -385,9 +383,7 @@ ssi 9.243113e-01 4.765403e-01</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#library("gridExtra")</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3, widths = 2)</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>plot_cluster_5</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>plot_cluster_5</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
@@ -420,7 +416,7 @@ ssi 9.243113e-01 4.765403e-01</code></pre>
 <span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>cluster_k5_100_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
 <span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_100"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
 <span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map, <span class="at">nrow =</span> <span class="dv">3</span> )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
@@ -481,14 +477,15 @@ ward     1183 434 528 1944 1333</code></pre>
 <details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>cluster_h5_ward <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"c_ward_5"</span>, <span class="at">palette =</span> <span class="st">"RdYlGn"</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"c_ward_5"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_h5_ward,cluster_k5_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_h5_ward)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>The visual inspection of this track is already giving a good impression of how the fix point data is split into segments. Though there is a lack of continuity, as longer stretches of the same color are interrupted by single fixes of a different color. Generally the clustering works well with differentiation between running and walking, but bike and tram appear to be within the same cluster. This is likely due to similar parameter characteristics from the parameters used for the clustering. It would thus be necessary, to find a parameter, which would allow the clustering method to differentiate between a bike and tram ride.</p>
 </section>
 <section id="verification-with-chi-square-test" class="level3">
 <h3 class="anchored" data-anchor-id="verification-with-chi-square-test">Verification with chi square test</h3>
@@ -525,11 +522,11 @@ hclust_ward - kmeans_100
 <div class="cell-output cell-output-stdout">
 <pre><code>              X_squared.X-squared df.df p_value
 GIS_speed                5237.772    16       0
-GIS_kmeans               8440.297    16       0
+GIS_kmeans               6531.559    16       0
 GIS_hmeans               9211.967    16       0
 speed_hmeans             6084.513    16       0
-speed_kmeans             7298.837    16       0
-hmeans_kmeans           13777.363    16       0</code></pre>
+speed_kmeans             7081.301    16       0
+hmeans_kmeans           12111.207    16       0</code></pre>
 </div>
 </div>
 <p>The X-squared value is highest comparing the hclust and kmeans values, but this is not of relevance. Taking GIS as the reference, from all classifications, the hclust cluster has the highest X-squared value and thus seems to be closest to the GIS classification. Interestingly, kmeans is closer to the speed classification.</p>
@@ -537,7 +534,7 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map, <span class="at">nrow =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
@@ -577,20 +574,11 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 </section>
 <section id="discussion" class="level2">
 <h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
-<p>chaining</p>
-<p>The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect.</p>
-<p>. It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. Furthermore, it needs to be mentioned that for the validation with GIS, the speed information was used as a control. Therefore, independent control of cluster quality cannot be guaranteed.</p>
-<ul>
-<li>stationäre punkte mitgeclustert</li>
-<li>spatial proximity of the data: This might have led to a disadvantage for clustering?</li>
-</ul>
+<p>The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods fail to differentiate between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect. In an earlier stage of this project, it was observed, that hclust generated a more accurate differentiation when only looking at the data of one track (results of this are not included/got lost on the way). This leads to the assumption, that the movement type information gets more obscure with the information of several tracks, causing a greater heterogeneity within one movement type and potentially more overlap among different movement types. This raises the question, if this method is suitable for bigger sets of data or sets with different movement patterns. Considering the included data, it should also be mentioned, that the stationary phases were not removed from the movement data. It would be interesting to see, if removing them could help with the accuracy of the clustering methods. Furthermore, it is to mention, that the validation with GIS used the speed information from the parameters that were also used within the clustering. It is not clear, in how far this might cause a dependency between the ground-truth from GIS and the cluster results. Lastly, it is not clear how the dependency of spatial data influences the clustering procedure. This could be further investigated with a more thorough literature analysis on the method, but this was not in the scope of our project.</p>
 <section id="further-research" class="level3">
 <h3 class="anchored" data-anchor-id="further-research">Further Research</h3>
-<ul>
-<li>At first, the turning angle was considered as an alternative parameter to mitigate the inaccuracies that occured when the bike slowed down in curves, however there was no time left to include this in the analysis and will therefore be left for another project.</li>
-<li>Another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g.&nbsp;the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well.</li>
-<li>Further clustering, such as kmodes, which also allows ordinal/categorical variables to be considered, would have been of interest, as infrastructural data could have been included.</li>
-</ul>
+<p>Apart from the suggested investigation that are mentioned in the discussion above, the following points could be of interest:</p>
+<p>The turning angle was considered as an alternative parameter to mitigate the inaccuracies that occured when the bike slowed down in curves, however there was no time left to include this in the analysis and will therefore be left for another project. Another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g.&nbsp;the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well. Further clustering, such as kmodes, which also allows to consider ordinal/categorical variables, would have been of interest, as infrastructural data could have been included. Finally, it could be tested, in how far smoothing out the inconsistencies within segments of one movement type would improve the validation method.</p>
 </section>
 </section>
 <section id="appendix" class="level2">
@@ -608,7 +596,7 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>wordcountaddin<span class="sc">::</span><span class="fu">word_count</span>(<span class="st">"index.qmd"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2661</code></pre>
+<pre><code>[1] 2946</code></pre>
 </div>
 <details>
 <summary>Code</summary>
