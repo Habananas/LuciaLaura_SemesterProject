@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Lucia Scheele and Laura Vetter">
+
+<title>A Travel Mode Detection approach based on hierarchical and non hierarchical clustering</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">A Travel Mode Detection approach based on hierarchical and non hierarchical clustering</h1>
+<p class="subtitle lead">Patterns and Trends in Environmental Data</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Lucia Scheele and Laura Vetter </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<details>
+<summary>preprocessing</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#loading all the data from the preprocessing files</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"my_environment.rdata"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tmap)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(maptiles)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>) <span class="co"># bc mode "view" is too work intensive</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#define background map</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>bbox <span class="ot">&lt;-</span> <span class="fu">st_bbox</span>(selected_tracks_na_omit)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch OSM tiles</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>osm_bg <span class="ot">&lt;-</span> <span class="fu">get_tiles</span>(bbox, <span class="at">provider =</span> <span class="st">"OpenStreetMap"</span>, <span class="at">zoom =</span> <span class="dv">16</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>osm_bg_zoom <span class="ot">&lt;-</span> <span class="fu">get_tiles</span>(bbox, <span class="at">provider =</span> <span class="st">"OpenStreetMap"</span>, <span class="at">zoom =</span> <span class="dv">18</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+|---------|---------|---------|---------|
+=========================================
+                                          
+
+|---------|---------|---------|---------|
+=========================================
+                                          
+
+|---------|---------|---------|---------|
+=========================================
+                                          
+
+|---------|---------|---------|---------|
+=========================================
+                                          </code></pre>
+</div>
+</div>
+<section id="abstract" class="level2">
+<h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
+<p>This project aims to analyze travel behaviour and clustering of travel segments by different clustering methods and visual analysis. Parameters like speed, acceleration, elevation and sinuosity and derived parameters were used for clustering with kmeans and hclust. Additionally, a segmentation by threshold (using the parameter speed) and a manual segmentation using GIS were carried out to compare them to the clustering. Verification took place using Chi square test. It was found that ¨</p>
+<p>the amount of clusters - 5 clusters, which corresponds to the actual amount of travel modes (+standing) - hclust predicts better than kmeans - the ward method in hclust is better than single and - xxx showed a better (or equally good) result than manual classification. - Verification method - … BEARBEITEN</p>
+<p>TO CONSIDER: Interactive maps are only reasonable for small amounts of data (e.g.&nbsp;a few locations of a single wild boar). If you want to show a large amount of data, consider making a static map instead (using tmap_mode(“plot”)).</p>
+</section>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>In order to understand travel behaviour, it is critical to analyze movement data and be able to classify different types of movement correctly (<span class="citation" data-cites="sadeghian2022stepwise">Sadeghian et al. (<a href="#ref-sadeghian2022stepwise" role="doc-biblioref">2022</a>)</span>). However, the exact detection of the corresponding travel modes is complex and can be time consuming.<br>
+Generic methodologies to detect travel modes have been described using unsupervised learning algorithms, GIS multi-criteria process (eg. by <span class="citation" data-cites="sadeghian2022stepwise">Sadeghian et al. (<a href="#ref-sadeghian2022stepwise" role="doc-biblioref">2022</a>)</span>), and supervised learning algorithms or decision trees and confusion matrix(<span class="citation" data-cites="shamoun2012sensor">Shamoun-Baranes et al. (<a href="#ref-shamoun2012sensor" role="doc-biblioref">2012</a>)</span>). This project aims to answer the reasearch question of which travel modes can be differentiated in trajectories with different travel modes within the trajectories using hierarchical and non-hierarical clustering? Therefore, the project focuses on a comparison of these two clustering methods, and a comparison with a manual segmentation using ArcGIS and a threshold segmentation using the parameter speed.</p>
+</section>
+<section id="material-and-methods" class="level2">
+<h2 class="anchored" data-anchor-id="material-and-methods">Material and Methods</h2>
+<section id="data" class="level3">
+<h3 class="anchored" data-anchor-id="data">Data</h3>
+<p>The data sample consists of movement data collected with the Tracking App Strava, by two individuals over a timespan of April - May 2024. Overall, 31 trips of different travel modes were recorded with the movement types walking, running, cycling, bus, tram, train and car. For simplification of the design and to be able to focus on the application of the clustering methods, a sample of 2 trips with different movement types within the trajectory were selected to be analyzed. The tracks were selected so that all movement types standing, walking, running, biking and tram were included. Data points were recorded every second, resulting in a relatively high resolution of data. However, data frequency is not consistent in all cases due to lack of signal (e.g.&nbsp;in a train). At first, including contextual data such as traffic infrastructure data by the city of Zurich ( <a href="#0" class="uri">https://www.stadt-zuerich.ch/geodaten/</a>) was considered. Out of two reasons, it was decided not to include this data: 1) categorical data is not suitable for the evaluation with the k-means clustering algorithm and 2) the infrastructure data dit not overlap with the trajectories in many cases and was therefore not especially meaningful. Therefore, the focus was set on the analysis of the numerical data.</p>
+</section>
+<section id="calulation-of-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="calulation-of-parameters">Calulation of Parameters</h3>
+<p>The analysis was made with data of the individual fixes. instead of using segments for the analysis of e.g.&nbsp;acceleration, the data of moving windows ( X steps before and after the fix) was assigned to the individual fix. This was done to have more information for each fix (data point).</p>
+<p>5 different travel modes could be identified in the samples (standing, walking, running, tram, biking), therefore the optimal number of clusters expected is 5, which is also the number of classes assigned in GIS and with the speed parameter. Also, the trajectory data will be analysed with partitioning methods to determine the number of clusters needed, and results will be compared. Space and time of trajectories were treated to be relative and are filtered out for the analysis. The parameters for clustering will be calculated from the given geographical data and include:</p>
+<ul>
+<li>
+distance point1 - point2
+</li>
+<li>
+speed p1 - p2
+</li>
+<li>
+acceleration p1 - p2
+</li>
+<li>
+mean speed in moving window
+</li>
+<li>
+max speed in moving window
+</li>
+<li>
+mean acceleration in moving window
+</li>
+<li>
+max acceleration in moving window
+</li>
+<li>
+elevation change in moving window
+</li>
+<li>
+sinuosity in moving window
+</li>
+</ul>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    distance <span class="ot">=</span> <span class="fu">distance_by_element</span>(geometry, <span class="fu">lead</span>(geometry, <span class="dv">1</span>)), </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    time_diff <span class="ot">=</span> <span class="fu">as.numeric</span>(timestamp <span class="sc">-</span> <span class="fu">lag</span>(timestamp)),</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    speed <span class="ot">=</span> distance <span class="sc">/</span> time_diff,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    speed_kmh <span class="ot">=</span> speed <span class="sc">*</span> <span class="fl">3.6</span>, </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    acceleration <span class="ot">=</span> (speed <span class="sc">-</span> <span class="fu">lag</span>(speed)) <span class="sc">/</span> time_diff,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    avg_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    avg_speed_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    max_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    avg_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>) ,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    avg_acc_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    max_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    el_change <span class="ot">=</span> (elevation <span class="sc">-</span><span class="fu">lag</span>(elevation,  <span class="dv">10</span>)),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">distance_by_element</span>(<span class="fu">lag</span>(geometry,<span class="dv">4</span>), <span class="fu">lead</span>(geometry,<span class="dv">5</span>)),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    d_sinu10 <span class="ot">=</span> <span class="fu">rollsum</span>(distance, <span class="dv">10</span>,<span class="at">align =</span> <span class="st">"center"</span>, <span class="at">fill =</span> <span class="cn">NA</span>), </span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">case_when</span>(d_direct10 <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> d_sinu10,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                           <span class="cn">TRUE</span> <span class="sc">~</span> d_direct10),</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    sinuosity <span class="ot">=</span> d_sinu10<span class="sc">/</span>d_direct10   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The calculation of sinuosity, some adaptions needed to be made as some values had the value “Inf”. This occurs when the direct distance = 0, meaning that start and end point of the moving window are the same. The actual moving distance is &gt;1, as within the moving window movement occured.<br>
+</p>
+<p>actual moving distance /direct distance = x/0=Inf</p>
+<p>There are several ways to deal with this problem:</p>
+<ul>
+<li>
+Set inf values to the maximum value of the sinuosity
+</li>
+<li>
+Filter out values completely from the table
+</li>
+<li>
+Insert the actual distance traveled per 10 points, actual/direct=x/x=1
+</li>
+</ul>
+<p>The third method was chosen, resulting in the lowest sinuosity value possible (=1).</p>
+</section>
+<section id="speed-parameter-classification" class="level3">
+<h3 class="anchored" data-anchor-id="speed-parameter-classification">Speed Parameter Classification</h3>
+<p>In order to verify how well speed alone can already predict the different movement types, a classification was made based on speed as the only criterion. The different travel modes were assigned to different speeds where:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#speed_cluster = case_when(</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh == 0 ~ "1", #standing</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &lt; 5 ~ "2", #walking</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 5 &amp; speed_kmh &lt; 18 ~ "3",  #running</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 18 &amp; speed_kmh &lt; 30 ~ "4", # biking </span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt; 30 ~ "5" # tram </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>   <span class="co"># )</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Possible unhomogenity of some fixes could be a problem, e.g.&nbsp;when the threshold is set at a point where the speed varies constantly (e.g. speed&gt;5 = running, speed&lt;5 = walking). This issue will be resolved with manual classification in GIS.</p>
+</section>
+<section id="manual-classification-using-gis" class="level3">
+<h3 class="anchored" data-anchor-id="manual-classification-using-gis">Manual Classification using GIS</h3>
+<p>In order to test the results of our cluster analysis, it was aimed to assess in how far the cluster categories are consistent with the actual movement types conducted during the trajectory recordings. This required two independent enrichments of the fix point data. In one step, the information of the actual movement type had to be added to the single trajectory fixes by using the recorder’s knowledge of the track. This step was conducted within ArcGis (Tools: Select and Calculate Field). To help the recognition of movement type change, the fix points were colored using the speed (km/h) variable.<br>
+In another step, the individual cluster groups were inspected visually and statistically to find out which movement they are likely to represent.</p>
+</section>
+<section id="clustering-with-kmeans" class="level3">
+<h3 class="anchored" data-anchor-id="clustering-with-kmeans">Clustering with kmeans</h3>
+<p>K means is one of the most commonly used partition based algorithms (<span class="citation" data-cites="yuan2017review">Yuan et al. (<a href="#ref-yuan2017review" role="doc-biblioref">2017</a>)</span>), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster. First, partitioning (determining the appropriate number of k) is carried out using the elbow method from the package factoextra (<span class="citation" data-cites="ElbowMethod">(<a href="#ref-ElbowMethod" role="doc-biblioref"><strong>ElbowMethod?</strong></a>)</span>) and the cascade method from the package vegan.<br>
+All parameters included in the clustering analysis are numerical:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(km_no_geom, <span class="dv">5</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 11
+  distance speed acceleration avg_speed_10s avg_speed_60s avg_acc_10s
+     &lt;dbl&gt; &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;
+1     4.21  4.21        2.59           8.34          9.65     -0.0108
+2     2.02  2.02       -2.19           8.11          9.87     -0.0652
+3     3.01  3.01        0.994          9.32         10.1       0.338 
+4     3.34  3.34        0.331          9.74         10.3       0.115 
+5     1.40  1.40       -1.94           9.64         10.4      -0.0284
+# ℹ 5 more variables: avg_acc_60s &lt;dbl&gt;, el_change &lt;dbl&gt;, d_direct10 &lt;dbl&gt;,
+#   d_sinu10 &lt;dbl&gt;, sinuosity &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</section>
+<section id="clustering-with-hclust" class="level3">
+<h3 class="anchored" data-anchor-id="clustering-with-hclust">Clustering with hclust</h3>
+<p>When using k-means, the iterative process results in a cluster partition that differs with the number of requested cluster groups. In contrast, hierarchical cluster algorithms also allow to explore how the various clusters are related to each other with different clustering levels. The agglomerative hierarchical clustering does this, by first assigning each object its own cluster and iteratively joining the two most similar clusters, until there is just one single cluster. The distance between clusters is calculated according to a distance measure of choice (<span class="citation" data-cites="rdocumentationHclustFunction"><span>“Hclust Function - <span>R</span><span>D</span>ocumentation — Rdocumentation.org”</span></span>). Here, three typical methods for this type of hierarchical clustering are explored: <em>Ward’s Minimum Variance Method</em>, the <em>complete linkage method</em> and <em>single linkage</em> method.<br>
+Here, the agglomerative clustering methods were applied using <em>hclust</em> function from the <em>stats</em> package. The required input data has to be supplied as a dissimilarity structure. The latter was calculated from the scaled parameter values of each observation using the <em>dist</em> function (i.e.&nbsp;chord-distance). This prevents, that ensures, that parameters with different value scales have a equal influence on the results.</p>
+</section>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
+<p>Two trajectories were chosen which include several travel modes. The first one (light blue) is a mixture of walking, running, tram and standing (at the tram stop). The second one (green) consists of biking, walking and standing.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>trackID_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit) <span class="sc">+</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"trajID"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>trackID_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Map with the two Trajectories to be analyzed</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<section id="speed-classification" class="level3">
+<h3 class="anchored" data-anchor-id="speed-classification">Speed Classification</h3>
+<p>The parameters distance, speed, acceleration, elevation and sinuosity were calculated as mentioned in the methods. The visual evaluation showed that speed might be the most appropriate as a reference predictor for classifying the movement types. Therefore, it was taken and a threshold analysis was made.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>speed_map <span class="ot">&lt;-</span>  <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_kmh"</span>, <span class="at">palette =</span> <span class="st">"-RdYlGn"</span>) </span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>cluster_speed_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_cluster_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(speed_map, cluster_speed_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Map 1: Speed in km/h , Map 2: Classification by Speed</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The first map shows the actual speed per datafix, while the second map shows the classification via the speed thresholds. Here, most of the biking part and the tram are classified correctly, however the differentiation between walking and running is not perfect and also incorrect when the tram slows down.</p>
+</section>
+<section id="gis-classification" class="level3">
+<h3 class="anchored" data-anchor-id="gis-classification">GIS Classification</h3>
+<p>To be able to differentiate between the different groups, a manual assignation of the groups was made in ArcGIS. It works as the “reference classification” or ground truth.</p>
+</section>
+<section id="kmeans-cluster" class="level3">
+<h3 class="anchored" data-anchor-id="kmeans-cluster">kmeans Cluster</h3>
+<section id="partitioning" class="level4">
+<h4 class="anchored" data-anchor-id="partitioning">Partitioning</h4>
+<p>In order to define the appropriate number of clusters, the elbow statistics is used. The bend (like a bent elbow) in the line indicates the number of appropriate k.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>plot_k_elbow</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>This method indicates that the best amount of clusters seems to be 2, as the curve starts to bend there. The method was tried with several configurations (different n-starts, leaving out parameters like elevation or sinuosity, taking one track only), but the indicated number for k stayed the same. As this does not correspond to the actual amount of movement types, a different method, the cascade, was tried out. Here, the suitability was tested for 2-8 cluster groups.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>cascade_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>        2 groups     3 groups     4 groups     5 groups     6 groups
+SSE 40794.518994 3.420099e+04 3.076598e+04 2.749286e+04 2.535376e+04
+ssi     0.600691 6.244613e-01 7.005974e-01 1.441969e-01 5.654394e-01
+        7 groups     8 groups
+SSE 2.328762e+04 2.199303e+04
+ssi 9.243113e-01 4.765403e-01</code></pre>
+</div>
+</div>
+<p>The SSE (sum of squared errors) is a measure of how well the data points are summarized within the clusters. The lower, the better the clustering. In the ssi (silhouette index) the higher the value (from -1 to 1) the better the clustering. The ssi is highest for 5 groups, while the SSE decreases constantly with the rising number of groups. This indicates that a well chosen amount of k is 5.</p>
+</section>
+<section id="applying-kmeans" class="level4">
+<h4 class="anchored" data-anchor-id="applying-kmeans">Applying kmeans</h4>
+<p>The importance of the nstart criterium in the kmeans analysis is not to underestimate. It is recommended to run k-means multiple times with different random n-starts and choosing the best result, as this helps avoid getting stuck in a poor local optimum. In the following graphic, we can see the different results when using no predetermined n, n=20 and n=100.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#library("gridExtra")</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3, widths = 2)</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>plot_cluster_5</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>plot_cluster_5_20</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-10-2.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>plot_cluster_5_100</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-10-3.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The classification of the sample points in the point cloud, gives insight into how many data points belong to which cluster. From this, it is not yet possible to determine which clustering method might correspond best to the original movement type and which amount of n suits our classification best.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>cluster_k5_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>cluster_k5_20_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_20"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>cluster_k5_100_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_100"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Looking at the clusters with k=5, k=5&amp;n=20 and k=5&amp;n=100, we can see that the distribution of clusters is very similar, meaning that (sadly, this is much better visible in the interactive map, but it is too heavy to load in the html document) This means, n does not make a great difference in the assignation of the fixes to the clusters, different to what the plots before indicated. However, the problem of clustering difficulties for running/walking and differentiation of tram &amp; bike are encountered again.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>cluster_k4_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans4"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>cluster_k4_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Changing to k=4, running, walking and a third category can be relatively clearly distinguished, but there is neither a distinction between tram and bike visible. Also curves with the bike (which imply slowing down) or tram stops are not classified correctly. For further analysis we will therefore leave out the k=4.</p>
+</section>
+</section>
+<section id="hclust-cluster" class="level3">
+<h3 class="anchored" data-anchor-id="hclust-cluster">hclust Cluster</h3>
+<p>meaning that e.g.&nbsp;cluster bike is closer to running and tram is closer to train</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>cluster_h5_ward <span class="ot">&lt;-</span>  <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"c_ward_5"</span>, <span class="at">palette =</span> <span class="st">"RdYlGn"</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_h5_ward,cluster_k5_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Works well with differentiation between running and walking, but bike and tram look the same.</p>
+</section>
+<section id="verification-with-chi-square-test" class="level3">
+<h3 class="anchored" data-anchor-id="verification-with-chi-square-test">Verification with chi square test</h3>
+<p>Clusterings with different k values are not directly comparable, as they have fundamentally different structures. Therefore, we will focus on the comparison of k=5 only. The n criteria in kmeans does not play such a big role in cluster assignation after all, therefore, only k=5&amp;n=100 is taken into account for verification. The best method to analyse several categorical variables (cluster groups) with no supposed causality between them is the chi square or fishers test. However, fishers test is for smaller data samples (sample size less than 1000), therefore the chi square is the appropriate test (Source: https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher’s_Exact_Test )</p>
+<p>We will compare:</p>
+<ul>
+<li>
+GIS - Speed
+</li>
+<li>
+GIS - kmeans_100
+</li>
+<li>
+GIS - hclust_ward
+</li>
+<li>
+speed - kmeans_100
+</li>
+<li>
+speed - hclust_ward
+</li>
+<li>
+hclust_ward - kmeans_100
+</li>
+</ul>
+<p><em>X-squared</em>: This is the value of the chi-squared statistic. The larger χ2, the more likely that the variables are related.</p>
+<p><em>df</em>: This is the number of degrees of freedom. It is typically calculated as (number of rows-1)×(number of columns-1) in the contingency table.</p>
+<p><em>p-value</em>: This is the p-value of the test. A very small p-value (in this case extremely small) indicates that the probability of obtaining the observed data when the null hypothesis is true is very low.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>results_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>              X_squared.X-squared df.df p_value
+GIS_speed                5237.772    16       0
+GIS_kmeans               8440.297    16       0
+GIS_hmeans               9211.967    16       0
+speed_hmeans             6084.513    16       0
+speed_kmeans             7298.837    16       0
+hmeans_kmeans           13777.363    16       0</code></pre>
+</div>
+</div>
+<p>The X-squared value is highest comparing the hclust and kmeans values, but this is not of relevance. Taking GIS as the reference, from all classifications, the hclust cluster has the highest X-squared value and thus seems to be closest to the GIS classification. Interestingly, kmeans is closer to the speed classification.</p>
+<p>Lets check these results visually:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"GIS_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"k5_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map <span class="ot">&lt;-</span><span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"hward_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<ul>
+<li>Category Standing was not Identified with either of the clustering methods.</li>
+<li>the “undefined” category is the same in both clustering methods, and seems to consist of points with high sinuosity or points where data nearby is missing (NA). No time for further investigation.</li>
+<li>Differentiation between bike&amp;tram was not possible.</li>
+</ul>
+</section>
+</section>
+<section id="discussion" class="level2">
+<h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
+<p>We could statistically prove that the hmean clustering method could better predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect (this was left out of the report). It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. Furthermore, it needs to be mentioned that for the validation with GIS, the speed information was used as a control. Therefore, independent control of cluster quality cannot be guaranteed.</p>
+<section id="further-research" class="level3">
+<h3 class="anchored" data-anchor-id="further-research">Further Research</h3>
+<ul>
+<li>At first, the turning angle was considered as an alternative parameter to mitigate the inaccuracies that occured when the bike slowed down in curves, however there was no time left to include this in the analysis and will therefore be left for another project.</li>
+<li>Another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g.&nbsp;the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well.</li>
+<li>Further clustering, such as kmodes, which also allows ordinal/categorical variables to be considered, would have been of interest, as infrastructural data could have been included.</li>
+</ul>
+<p>UNFINISHED, to be included in discussion: - spatial proximity of the data: This might have led to a disadvantage for clustering? (Lucia) - scale/normalisation. Warum normalisieren wir dieWerte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?</p>
+</section>
+</section>
+<section id="appendix" class="level2">
+<h2 class="anchored" data-anchor-id="appendix">Appendix</h2>
+<section id="wordcount" class="level3">
+<h3 class="anchored" data-anchor-id="wordcount">Wordcount</h3>
+<!-- after installing the wordcountaddin, remove the line "#| eval: false" -->
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">#for word count:</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("pacman") </span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">p_install_gh</span>(<span class="st">"benmarwick/wordcountaddin"</span>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>wordcountaddin<span class="sc">::</span><span class="fu">word_count</span>(<span class="st">"index.qmd"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2520</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#knitr::spin("preprocessing.R") --&gt; macht "run" von preprocessing file und produziert html. </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+
+</section>
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-rdocumentationHclustFunction" class="csl-entry" role="listitem">
+<span>“Hclust Function - <span>R</span><span>D</span>ocumentation — Rdocumentation.org.”</span> <a href="https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust" class="uri">https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust</a>.
+</div>
+<div id="ref-sadeghian2022stepwise" class="csl-entry" role="listitem">
+Sadeghian, Paria, Xiaoyun Zhao, Arman Golshan, and Johan Håkansson. 2022. <span>“A Stepwise Methodology for Transport Mode Detection in GPS Tracking Data.”</span> <em>Travel Behaviour and Society</em> 26: 159–67.
+</div>
+<div id="ref-shamoun2012sensor" class="csl-entry" role="listitem">
+Shamoun-Baranes, Judy, Roeland Bom, E Emiel van Loon, Bruno J Ens, Kees Oosterbeek, and Willem Bouten. 2012. <span>“From Sensor Data to Animal Behaviour: An Oystercatcher Example.”</span> <em>PloS One</em> 7 (5): e37997.
+</div>
+<div id="ref-yuan2017review" class="csl-entry" role="listitem">
+Yuan, Guan, Penghui Sun, Jie Zhao, Daxing Li, and Canwei Wang. 2017. <span>“A Review of Moving Object Trajectory Clustering Algorithms.”</span> <em>Artificial Intelligence Review</em> 47: 123–44.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
