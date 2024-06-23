@@ -30,7 +30,6 @@ tmap_mode("plot") # bc mode "view" is too work intensive
 bbox <- st_bbox(selected_tracks_na_omit)
 # Fetch OSM tiles
 osm_bg <- get_tiles(bbox, provider = "OpenStreetMap", zoom = 16)
-osm_bg_zoom <- get_tiles(bbox, provider = "OpenStreetMap", zoom = 18)
 
 ```
 
@@ -286,15 +285,11 @@ threshold analysis was made.
 #| fig-cap: "Map 1: Speed in km/h , Map 2: Classification by Speed"
 
 
-speed_map <-  tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+
+speed_map <-  tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "speed_kmh", palette = "-RdYlGn") 
 
 
-cluster_speed_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_speed_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "speed_cluster_name", palette = "Paired")
 
 
@@ -315,8 +310,10 @@ classification" or ground truth.
 
 ```{r}
 #| fig-cap: "Map of manually assigned groups in ArcGIS"
+cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "GIS_name", palette = "Paired")
 
-
+cluster_GIS_map
 
 ```
 
@@ -361,8 +358,6 @@ we can see the different results when using no predetermined n, n=20 and
 n=100.
 
 ```{r}
-#library("gridExtra")
-#grid.arrange(plot_cluster_5, plot_cluster_5_20, plot_cluster_5_100, ncol = 3, widths = 2)
 plot_cluster_5
 plot_cluster_5_20
 plot_cluster_5_100
@@ -375,22 +370,16 @@ correspond best to the original movement type and which amount of n
 suits our classification best.
 
 ```{r}
-cluster_k5_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_k5_map <-   tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5", palette = "Paired")
 
-cluster_k5_20_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_k5_20_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5_20", palette = "Paired")
 
-cluster_k5_100_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_k5_100_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5_100", palette = "Paired")
 
-tmap_arrange(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )
+tmap_arrange(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map, nrow = 3 )
 ```
 
 Looking at the clusters with k=5, k=5&n=20 and k=5&n=100, we can see
@@ -403,9 +392,7 @@ difficulties for running/walking and differentiation of tram & bike are
 encountered again.
 
 ```{r}
-cluster_k4_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_k4_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans4", palette = "Paired")
 cluster_k4_map
 ```
@@ -425,7 +412,7 @@ The result of the h-clustering process is a tree of clusters which shows how the
 ```{r, dendogram}
 par(mfrow = c(1, 3))
 plot(hc_single, main = "Single", labels = NULL, sub = NULL)
-plot(hc_complete, , main = "Complete")
+plot(hc_complete, main = "Complete")
 plot(hc_ward, main = "Ward")
 
 par(mfrow = c(1,1))
@@ -440,30 +427,15 @@ summary_table_hclust
 Since in the given tracks, the movement types were easily practiced for more than a minute, we would expect there to be more than 60 fixes per movement type cluster. As the table above shows, the clusters from the single and complete method cannot account for this distribution. This is most likely due to the effect of chaining, where single observations are considered different from all other observations. This can also be observed in the given dendrograms.  In the following, we will thus only consider the results from the ward cluster. 
 
 ```{r}
-#P_ward_4
 
-#tmap_arrange(cluster_h5_ward,cluster_k5_map )
+cluster_h5_ward <- tm_shape(selected_tracks_na_omit)+ 
+  tm_dots(col = "c_ward_5", palette = "Paired")
 
-```
-Works well with differentiation between running and walking, but bike and tram look the same. 
-
-
-meaning that e.g. cluster bike is closer to running and tram is closer
-to train
-
-```{r}
-
-cluster_h5_ward <-  tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
-  tm_dots(col = "c_ward_5", palette = "RdYlGn")
-
-tmap_arrange(cluster_h5_ward,cluster_k5_map )
+tmap_arrange(cluster_h5_ward)
 
 ```
 
-Works well with differentiation between running and walking, but bike
-and tram look the same.
+
 
 ### Verification with chi square test
 
@@ -475,9 +447,7 @@ taken into account for verification. The best method to analyse several
 categorical variables (cluster groups) with no supposed causality
 between them is the chi square or fishers test. However, fishers test is
 for smaller data samples (sample size less than 1000), therefore the chi
-square is the appropriate test (Source:
-https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics\_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher's_Exact_Test
-)
+square is the appropriate test (@Fisher_Test).
 
 We will compare:
 
@@ -521,7 +491,7 @@ kmeans is closer to the speed classification.
 Lets check these results visually:
 
 ```{r}
-tmap_arrange(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)
+tmap_arrange(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map, nrow = 3)
 
 ```
 

@@ -135,23 +135,8 @@ div.csl-indent {
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#define background map</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>bbox <span class="ot">&lt;-</span> <span class="fu">st_bbox</span>(selected_tracks_na_omit)</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch OSM tiles</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>osm_bg <span class="ot">&lt;-</span> <span class="fu">get_tiles</span>(bbox, <span class="at">provider =</span> <span class="st">"OpenStreetMap"</span>, <span class="at">zoom =</span> <span class="dv">16</span>)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>osm_bg_zoom <span class="ot">&lt;-</span> <span class="fu">get_tiles</span>(bbox, <span class="at">provider =</span> <span class="st">"OpenStreetMap"</span>, <span class="at">zoom =</span> <span class="dv">18</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>osm_bg <span class="ot">&lt;-</span> <span class="fu">get_tiles</span>(bbox, <span class="at">provider =</span> <span class="st">"OpenStreetMap"</span>, <span class="at">zoom =</span> <span class="dv">16</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-|---------|---------|---------|---------|
-=========================================
-                                          
-
-|---------|---------|---------|---------|
-=========================================
-                                          
-
-|---------|---------|---------|---------|
-=========================================
-                                          </code></pre>
-</div>
 </div>
 <section id="abstract" class="level2">
 <h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
@@ -206,23 +191,23 @@ sinuosity in moving window
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    distance <span class="ot">=</span> <span class="fu">distance_by_element</span>(geometry, <span class="fu">lead</span>(geometry, <span class="dv">1</span>)), </span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    time_diff <span class="ot">=</span> <span class="fu">as.numeric</span>(timestamp <span class="sc">-</span> <span class="fu">lag</span>(timestamp)),</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    speed <span class="ot">=</span> distance <span class="sc">/</span> time_diff,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    speed_kmh <span class="ot">=</span> speed <span class="sc">*</span> <span class="fl">3.6</span>, </span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    acceleration <span class="ot">=</span> (speed <span class="sc">-</span> <span class="fu">lag</span>(speed)) <span class="sc">/</span> time_diff,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    avg_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    avg_speed_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>), </span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    max_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    avg_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>) ,</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    avg_acc_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    max_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    el_change <span class="ot">=</span> (elevation <span class="sc">-</span><span class="fu">lag</span>(elevation,  <span class="dv">10</span>)),</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">distance_by_element</span>(<span class="fu">lag</span>(geometry,<span class="dv">4</span>), <span class="fu">lead</span>(geometry,<span class="dv">5</span>)),</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    d_sinu10 <span class="ot">=</span> <span class="fu">rollsum</span>(distance, <span class="dv">10</span>,<span class="at">align =</span> <span class="st">"center"</span>, <span class="at">fill =</span> <span class="cn">NA</span>), </span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">case_when</span>(d_direct10 <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> d_sinu10,</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                           <span class="cn">TRUE</span> <span class="sc">~</span> d_direct10),</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    sinuosity <span class="ot">=</span> d_sinu10<span class="sc">/</span>d_direct10   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    distance <span class="ot">=</span> <span class="fu">distance_by_element</span>(geometry, <span class="fu">lead</span>(geometry, <span class="dv">1</span>)), </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    time_diff <span class="ot">=</span> <span class="fu">as.numeric</span>(timestamp <span class="sc">-</span> <span class="fu">lag</span>(timestamp)),</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    speed <span class="ot">=</span> distance <span class="sc">/</span> time_diff,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    speed_kmh <span class="ot">=</span> speed <span class="sc">*</span> <span class="fl">3.6</span>, </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    acceleration <span class="ot">=</span> (speed <span class="sc">-</span> <span class="fu">lag</span>(speed)) <span class="sc">/</span> time_diff,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    avg_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    avg_speed_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    max_speed_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(speed_kmh, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    avg_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>) ,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    avg_acc_60s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, mean, <span class="at">.before =</span> <span class="dv">30</span>, <span class="at">.after =</span> <span class="dv">30</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    max_acc_10s <span class="ot">=</span> <span class="fu">slide_dbl</span>(acceleration, max, <span class="at">.before =</span> <span class="dv">5</span>, <span class="at">.after =</span> <span class="dv">5</span>, <span class="at">.complete =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    el_change <span class="ot">=</span> (elevation <span class="sc">-</span><span class="fu">lag</span>(elevation,  <span class="dv">10</span>)),</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">distance_by_element</span>(<span class="fu">lag</span>(geometry,<span class="dv">4</span>), <span class="fu">lead</span>(geometry,<span class="dv">5</span>)),</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    d_sinu10 <span class="ot">=</span> <span class="fu">rollsum</span>(distance, <span class="dv">10</span>,<span class="at">align =</span> <span class="st">"center"</span>, <span class="at">fill =</span> <span class="cn">NA</span>), </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    d_direct10 <span class="ot">=</span> <span class="fu">case_when</span>(d_direct10 <span class="sc">==</span> <span class="dv">0</span> <span class="sc">~</span> d_sinu10,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                           <span class="cn">TRUE</span> <span class="sc">~</span> d_direct10),</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    sinuosity <span class="ot">=</span> d_sinu10<span class="sc">/</span>d_direct10   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>The calculation of sinuosity, some adaptions needed to be made as some values had the value “Inf”. This occurs when the direct distance = 0, meaning that start and end point of the moving window are the same. The actual moving distance is &gt;1, as within the moving window movement occured.<br>
@@ -248,13 +233,13 @@ Insert the actual distance traveled per 10 points, actual/direct=x/x=1
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#speed_cluster = case_when(</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh == 0 ~ "1", #standing</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &lt; 5 ~ "2", #walking</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 5 &amp; speed_kmh &lt; 18 ~ "3",  #running</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 18 &amp; speed_kmh &lt; 30 ~ "4", # biking </span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt; 30 ~ "5" # tram </span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>   <span class="co"># )</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#speed_cluster = case_when(</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh == 0 ~ "1", #standing</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &lt; 5 ~ "2", #walking</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 5 &amp; speed_kmh &lt; 18 ~ "3",  #running</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt;= 18 &amp; speed_kmh &lt; 30 ~ "4", # biking </span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>   <span class="co"># speed_kmh &gt; 30 ~ "5" # tram </span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>   <span class="co"># )</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>Possible unhomogenity of some fixes could be a problem, e.g.&nbsp;when the threshold is set at a point where the speed varies constantly (e.g. speed&gt;5 = running, speed&lt;5 = walking). This issue will be resolved with manual classification in GIS.</p>
@@ -271,7 +256,7 @@ All parameters included in the clustering analysis are numerical:</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(km_no_geom, <span class="dv">5</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(km_no_geom, <span class="dv">5</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 11
@@ -299,12 +284,12 @@ Here, the agglomerative clustering methods were applied using <em>hclust</em> fu
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>trackID_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit) <span class="sc">+</span> </span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"trajID"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>trackID_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>trackID_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit) <span class="sc">+</span> </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"trajID"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>trackID_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -321,19 +306,15 @@ Here, the agglomerative clustering methods were applied using <em>hclust</em> fu
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>speed_map <span class="ot">&lt;-</span>  <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_kmh"</span>, <span class="at">palette =</span> <span class="st">"-RdYlGn"</span>) </span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>cluster_speed_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_cluster_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(speed_map, cluster_speed_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>speed_map <span class="ot">&lt;-</span>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_kmh"</span>, <span class="at">palette =</span> <span class="st">"-RdYlGn"</span>) </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>cluster_speed_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"speed_cluster_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(speed_map, cluster_speed_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -349,6 +330,23 @@ Here, the agglomerative clustering methods were applied using <em>hclust</em> fu
 <section id="gis-classification" class="level3">
 <h3 class="anchored" data-anchor-id="gis-classification">GIS Classification</h3>
 <p>To be able to differentiate between the different groups, a manual assignation of the groups was made in ArcGIS. It works as the “reference classification” or ground truth.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"GIS_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Map of manually assigned groups in ArcGIS</figcaption>
+</figure>
+</div>
+</div>
+</div>
 </section>
 <section id="kmeans-cluster" class="level3">
 <h3 class="anchored" data-anchor-id="kmeans-cluster">kmeans Cluster</h3>
@@ -413,22 +411,16 @@ ssi 9.243113e-01 4.765403e-01</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>cluster_k5_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>cluster_k5_20_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_20"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>cluster_k5_100_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_100"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>cluster_k5_map <span class="ot">&lt;-</span>   <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>cluster_k5_20_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_20"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>cluster_k5_100_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans5_100"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5_map, cluster_k5_20_map, cluster_k5_100_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
@@ -438,11 +430,9 @@ ssi 9.243113e-01 4.765403e-01</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>cluster_k4_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans4"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>cluster_k4_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>cluster_k4_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"kmeans4"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>cluster_k4_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
@@ -453,26 +443,56 @@ ssi 9.243113e-01 4.765403e-01</code></pre>
 </section>
 <section id="hclust-cluster" class="level3">
 <h3 class="anchored" data-anchor-id="hclust-cluster">hclust Cluster</h3>
-<p>meaning that e.g.&nbsp;cluster bike is closer to running and tram is closer to train</p>
+</section>
+<section id="hierarchical-clustering-hclust" class="level3">
+<h3 class="anchored" data-anchor-id="hierarchical-clustering-hclust">Hierarchical clustering (hclust)</h3>
+<p>The result of the h-clustering process is a tree of clusters which shows how the different clusters are related to eachother.</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>cluster_h5_ward <span class="ot">&lt;-</span>  <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"c_ward_5"</span>, <span class="at">palette =</span> <span class="st">"RdYlGn"</span>)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_h5_ward,cluster_k5_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>))</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(hc_single, <span class="at">main =</span> <span class="st">"Single"</span>, <span class="at">labels =</span> <span class="cn">NULL</span>, <span class="at">sub =</span> <span class="cn">NULL</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(hc_complete, <span class="at">main =</span> <span class="st">"Complete"</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(hc_ward, <span class="at">main =</span> <span class="st">"Ward"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="index_files/figure-html/dendogram-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Depending on the input data and the question asked, the cluster can be split at different cluster levels. In our case, the cluster level of 5 is a sensible choice when considering the amount of different movement types between which we would like to distinguish. Looking at the resulting summary of the fix point distribution among the five clusters, it became apparent, that the Ward method is the only method which was able to create spherical clusters of reasonable sizes.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>summary_table_hclust </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>            1   2   3    4    5
+single   5415   1   2    2    2
+complete 5364  20  25   11    2
+ward     1183 434 528 1944 1333</code></pre>
+</div>
+</div>
+<p>Since in the given tracks, the movement types were easily practiced for more than a minute, we would expect there to be more than 60 fixes per movement type cluster. As the table above shows, the clusters from the single and complete method cannot account for this distribution. This is most likely due to the effect of chaining, where single observations are considered different from all other observations. This can also be observed in the given dendrograms. In the following, we will thus only consider the results from the ward cluster.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>cluster_h5_ward <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"c_ward_5"</span>, <span class="at">palette =</span> <span class="st">"RdYlGn"</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_h5_ward,cluster_k5_map )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Works well with differentiation between running and walking, but bike and tram look the same.</p>
 </section>
 <section id="verification-with-chi-square-test" class="level3">
 <h3 class="anchored" data-anchor-id="verification-with-chi-square-test">Verification with chi square test</h3>
-<p>Clusterings with different k values are not directly comparable, as they have fundamentally different structures. Therefore, we will focus on the comparison of k=5 only. The n criteria in kmeans does not play such a big role in cluster assignation after all, therefore, only k=5&amp;n=100 is taken into account for verification. The best method to analyse several categorical variables (cluster groups) with no supposed causality between them is the chi square or fishers test. However, fishers test is for smaller data samples (sample size less than 1000), therefore the chi square is the appropriate test (Source: https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher’s_Exact_Test )</p>
+<p>Clusterings with different k values are not directly comparable, as they have fundamentally different structures. Therefore, we will focus on the comparison of k=5 only. The n criteria in kmeans does not play such a big role in cluster assignation after all, therefore, only k=5&amp;n=100 is taken into account for verification. The best method to analyse several categorical variables (cluster groups) with no supposed causality between them is the chi square or fishers test. However, fishers test is for smaller data samples (sample size less than 1000), therefore the chi square is the appropriate test (<span class="citation" data-cites="Fisher_Test"><span>“Fisher’s_exact_test”</span></span>).</p>
 <p>We will compare:</p>
 <ul>
 <li>
@@ -500,7 +520,7 @@ hclust_ward - kmeans_100
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>results_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>results_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>              X_squared.X-squared df.df p_value
@@ -517,7 +537,7 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="index_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
@@ -526,26 +546,26 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"GIS_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"k5_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map <span class="ot">&lt;-</span><span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"hward_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map</span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map</span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"GIS_name"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"k5_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map <span class="ot">&lt;-</span><span class="fu">tm_shape</span>(osm_bg) <span class="sc">+</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_rgb</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>)<span class="sc">+</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_shape</span>(selected_tracks_na_omit)<span class="sc">+</span> </span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_dots</span>(<span class="at">col =</span> <span class="st">"hward_names"</span>, <span class="at">palette =</span> <span class="st">"Paired"</span>)</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>cluster_k5names_map</span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>cluster_h5_names_map</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>cluster_GIS_map</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <ul>
@@ -557,6 +577,7 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 </section>
 <section id="discussion" class="level2">
 <h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
+<p>chaining</p>
 <p>The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect.</p>
 <p>. It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. Furthermore, it needs to be mentioned that for the validation with GIS, the speed information was used as a control. Therefore, independent control of cluster quality cannot be guaranteed.</p>
 <ul>
@@ -580,18 +601,18 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">#for word count:</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("pacman") </span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"pacman"</span>)</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">p_install_gh</span>(<span class="st">"benmarwick/wordcountaddin"</span>)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>wordcountaddin<span class="sc">::</span><span class="fu">word_count</span>(<span class="st">"index.qmd"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">#for word count:</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("pacman") </span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="fu">p_install_gh</span>(<span class="st">"benmarwick/wordcountaddin"</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>wordcountaddin<span class="sc">::</span><span class="fu">word_count</span>(<span class="st">"index.qmd"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2496</code></pre>
+<pre><code>[1] 2661</code></pre>
 </div>
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#knitr::spin("preprocessing.R") --&gt; macht "run" von preprocessing file und produziert html. </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">#knitr::spin("preprocessing.R") --&gt; macht "run" von preprocessing file und produziert html. </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 
@@ -603,6 +624,9 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <span>“Determining-the-Optimal-Number-of-Clusters-3-Must-Know-Methods.”</span> <a href="
 https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method" class="uri">
 https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method</a>.
+</div>
+<div id="ref-Fisher_Test" class="csl-entry" role="listitem">
+<span>“Fisher’s_exact_test.”</span> <a href="https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher's_Exact_Test" class="uri">https://stats.libretexts.org/Bookshelves/Applied_Statistics/Biological_Statistics_(McDonald)/02%3A_Tests_for_Nominal_Variables/2.07%3A_Fisher's_Exact_Test</a>.
 </div>
 <div id="ref-rdocumentationHclustFunction" class="csl-entry" role="listitem">
 <span>“Hclust Function - <span>R</span><span>D</span>ocumentation — Rdocumentation.org.”</span> <a href="https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust" class="uri">https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust</a>.

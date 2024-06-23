@@ -240,7 +240,7 @@ cascade_results <- KM.cascade$results #SSI
 
 
 ##### apply k means #####
-set.seed(1)
+set.seed(123)
 km_2 <- kmeans(km_all_scaled, 2)
 km_4 <- kmeans(km_all_scaled, 4)
 km_5 <- kmeans(km_all_scaled, 5)
@@ -249,10 +249,10 @@ km_5 <- kmeans(km_all_scaled, 5)
 km_5_100 <- kmeans(km_all_scaled, 5, nstart = 100)
 km_5_20 <- kmeans(km_all_scaled, 5, nstart = 20)
 
-# Match cluster IDs
-# install.packages("clue")
-# library(clue)
-# km_5_100$cluster <- cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
+# Match cluster IDs (did not work)
+install.packages("clue")
+library(clue)
+km_5_100$cluster <- clue::cl_predict(clue::cl_ensemble(km_5, km_5_100), km_all_scaled, method = "mean")
 
 #plots for the cluster distribution
 plot_cluster_4 <- fviz_cluster(km_4, data = km_all_scaled)
@@ -306,7 +306,7 @@ ward_5 <- summary(selected_tracks_na_omit$c_ward_5)
 # we wont take into consideration single and complete, as the cluster distribution is not suitable (see chaining).
 
 summary_table_hclust <- data.frame(
-  single = single, complete = complete, ward = ward) |> 
+  single = single_5, complete = complete_5, ward = ward_5) |> 
   t() |>  as.data.frame() # transpose the data so that columns become rows.
 
 # How individual points are distributed on track 
@@ -328,13 +328,15 @@ P_ward_5<- selected_tracks_na_omit |>
 #### Output Maps ####
 
 tmap_mode("plot")
+bbox <- st_bbox(selected_tracks_na_omit)
+osm_bg <- get_tiles(bbox, provider = "OpenStreetMap", zoom = 16)
 
-save(trackID_map,file="trackID_map.rda") 
 
 trackID_map <- tm_shape(osm_bg) +
   tm_rgb(alpha = 0.4)+
   tm_shape(selected_tracks_na_omit) + 
   tm_dots(col = "trajID", palette = "Paired", alpha = 1)
+save(trackID_map,file="trackID_map.png") 
 
 
 speed_map <- tm_shape(selected_tracks_na_omit)+
@@ -357,9 +359,7 @@ cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+
   tm_view(set.view = c(8.520515, 47.388322,  16))
 
 # k means maps
-cluster_k5_map <- tm_shape(osm_bg) +
-  tm_rgb(alpha = 0.4)+
-  tm_shape(selected_tracks_na_omit)+ 
+cluster_k5_map <-  tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5", palette = "Paired")
 
 selected_tracks_na_omit <- selected_tracks_na_omit |> 
