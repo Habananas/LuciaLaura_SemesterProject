@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title></title>
+<style type="text/css">
+/**
+ * Prism.s theme ported from highlight.js's xcode style
+ */
+pre code {
+  padding: 1em;
+}
+.token.comment {
+  color: #007400;
+}
+.token.punctuation {
+  color: #999;
+}
+.token.tag,
+.token.selector {
+  color: #aa0d91;
+}
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #1c00cf;
+}
+.token.property,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+  color: #c41a16;
+}
+.token.inserted {
+  background-color: #ccffd8;
+}
+.token.deleted {
+  background-color: #ffebe9;
+}
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #9a6e3a;
+}
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #836c28;
+}
+.token.function,
+.token.class-name {
+  color: #DD4A68;
+}
+.token.regex,
+.token.important,
+.token.variable {
+  color: #5c2699;
+}
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
+</style>
+<style type="text/css">
+body {
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+body, .footnotes, code { font-size: .9em; }
+li li { font-size: .95em; }
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+pre, img { max-width: 100%; }
+pre, pre:hover {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+pre code {
+  display: block;
+  overflow-x: auto;
+}
+code { font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace; }
+:not(pre) > code, code[class] { background-color: #F8F8F8; }
+code.language-undefined, pre > code:not([class]) {
+  background-color: inherit;
+  border: 1px solid #eee;
+}
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color: #666;
+  margin: 0;
+  padding-left: 1em;
+  border-left: 0.5em solid #eee;
+}
+hr, .footnotes::before { border: 1px dashed #ddd; }
+.frontmatter { text-align: center; }
+#TOC .numbered li { list-style: none; }
+#TOC .numbered { padding-left: 0; }
+#TOC .numbered ul { padding-left: 1em; }
+table, .body h2 { border-bottom: 1px solid #666; }
+.body .appendix, .appendix ~ h2 { border-bottom-style: dashed; }
+.footnote-ref a::before { content: "["; }
+.footnote-ref a::after { content: "]"; }
+section.footnotes::before {
+  content: "";
+  display: block;
+  max-width: 20em;
+}
+
+@media print {
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  tr, img { page-break-inside: avoid; }
+}
+@media only screen and (min-width: 992px) {
+  pre { white-space: pre; }
+}
+</style>
+</head>
+<body>
+<div class="include-before">
+</div>
+<div class="frontmatter">
+<div class="title"><h1></h1></div>
+<div class="author"><h2></h2></div>
+<div class="date"><h3></h3></div>
+</div>
+<div class="body">
+<pre><code class="language-r">#In this script, generate all outputs that you will need in your report (index.qmd).
+#To “prove” that this script runs on your machine from top to bottom, in a new session and without any errors, use the function 
+knitr::spin(&quot;preprocessing.R&quot;) 
+</code></pre>
+<pre><code>## 
+## 
+## processing file: preprocessing.Rmd
+</code></pre>
+<pre><code>## 
+  |                                                         
+  |                                                   |   0%
+  |                                                         
+  |.................                                  |  33%                   
+  |                                                         
+  |..................................                 |  67% [unnamed-chunk-14]
+  |                                                         
+  |...................................................| 100%                   
+</code></pre>
+<pre><code>## output file: preprocessing.md
+</code></pre>
+<pre><code class="language-r">#from the package knitr (you might need to install this first). 
+#Push the resulting files (preprocessing.html / preprocessing.md) to GitHub (this is a hard requirement).###
+
+#### Libraries ####
+
+# install.packages(&quot;XML&quot;)
+# install.packages(&quot;gitcreds&quot;)
+library(&quot;readr&quot;)
+library(sf) #simple features 
+library(ggplot2)
+library(dplyr)
+library(&quot;gitcreds&quot;)
+library(XML) #to read the XML data of gpx files
+library(tmap) #to show data in map viewer
+#library(leaflet) #alternative to show in a map
+library(lubridate) # time
+library(knitr) #To “prove” that script runs on your machine from top to bottom
+#install.packages(&quot;slider&quot;)
+library(slider) # for &quot;sliding&quot; over the datapoints (similar to leadlag or roll)
+#install.packages(&quot;factoextra&quot;)
+#install.packages(&quot;cluster&quot;)
+library(factoextra)#kmeans
+library(cluster)#kmeans
+library(zoo) # for sinuosity
+#install.packages(&quot;vegan&quot;)
+library(vegan) # for k means partitioning
+
+#### Data Loading and Organisation #### 
+
+# Get a list of files in the folder
+folder_path &lt;- &quot;activities_both/&quot; # folder with only the selected tracks
+file_list &lt;- list.files(folder_path, full.names = TRUE)
+
+#Create a function that assigns coordinates, elevation, time and activity name out of the gpx file, then apply this function to all of the gpx files:
+gpx_to_df &lt;- function(gpx_path) {
+  gpx_parsed &lt;- htmlTreeParse(file = gpx_path, useInternalNodes = TRUE)
+  # read out elements of the html file to vecotrs
+  coords &lt;- xpathSApply(doc = gpx_parsed, path = &quot;//trkpt&quot;, fun = xmlAttrs)
+  elevation &lt;- xpathSApply(doc = gpx_parsed, path = &quot;//trkpt/ele&quot;, fun = xmlValue)
+  time &lt;- xpathSApply(doc = gpx_parsed, path = &quot;//time&quot;, fun = xmlValue)
+  activity_name &lt;- xpathSApply(doc = gpx_parsed, path = &quot;//name&quot;, fun = xmlValue)
+  activity_type &lt;- xpathSApply(doc = gpx_parsed, path = &quot;//type&quot;, fun = xmlValue)
+  # remove first value of time, as it stems from the metadata and matches the second value (i.e. first timestamp of trackpoint)
+  time &lt;- time[-1]
+  # convert vectors to a data frame
+  df &lt;- data.frame(
+    lat = as.numeric(coords[&quot;lat&quot;, ]),
+    lon = as.numeric(coords[&quot;lon&quot;, ]),
+    elevation = as.numeric(elevation), 
+    timestamp = as.POSIXct(time,tz=&quot;UTC&quot;, format=c(&quot;%Y-%m-%dT%H:%M:%OS&quot;)),
+    ActivityName = activity_name,
+    ActivityType = activity_type
+  ) 
+  
+  dfname &lt;- print(substring(gpx_path, 17, 34)) #extract trajectory names
+  df$rec_id &lt;- dfname #add column with traj-name to df
+  assign(dfname, df, envir = .GlobalEnv) # add traj-name to df
+}
+
+# Iterate over each file and apply your function
+for (file_path in file_list) {
+  gpx_to_df(file_path)
+}
+</code></pre>
+<pre><code>## [1] &quot;11116616348.gpx&quot;
+## [1] &quot;11431066770.gpx&quot;
+## [1] &quot;11455763627.gpx&quot;
+</code></pre>
+<pre><code class="language-r"># Combine single track-files to one Dataframe 
+
+dflist &lt;- substring(file_list,17,34)
+dflist
+</code></pre>
+<pre><code>## [1] &quot;11116616348.gpx&quot; &quot;11431066770.gpx&quot; &quot;11455763627.gpx&quot;
+</code></pre>
+<pre><code class="language-r">all_tracks &lt;- do.call(rbind, lapply(dflist, get))
+
+# Delete single track files from environment -----&gt; is this needed?
+rm(list= dflist)
+
+# Converting the df to sf object
+library(sf)
+all_tracks &lt;- st_as_sf(all_tracks, coords = c(&quot;lon&quot;, &quot;lat&quot;), crs = 4326)
+str(all_tracks)
+</code></pre>
+<pre><code>## Classes 'sf' and 'data.frame':	12517 obs. of  6 variables:
+##  $ elevation   : num  414 414 414 414 414 ...
+##  $ timestamp   : POSIXct, format: &quot;2024-04-06 07:33:54&quot; &quot;2024-04-06 07:33:59&quot; ...
+##  $ ActivityName: chr  &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; ...
+##  $ ActivityType: chr  &quot;running&quot; &quot;running&quot; &quot;running&quot; &quot;running&quot; ...
+##  $ rec_id      : chr  &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; ...
+##  $ geometry    :sfc_POINT of length 12517; first list element:  'XY' num  8.52 47.38
+##  - attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##  - attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA NA NA NA NA
+##   ..- attr(*, &quot;names&quot;)= chr [1:5] &quot;elevation&quot; &quot;timestamp&quot; &quot;ActivityName&quot; &quot;ActivityType&quot; ...
+</code></pre>
+<pre><code class="language-r"># Transforming the crs to CH1903 +LV95 or EPSG:2056 &amp; Timezone
+all_tracks &lt;- st_transform(all_tracks, 2056)
+str(all_tracks)
+</code></pre>
+<pre><code>## Classes 'sf' and 'data.frame':	12517 obs. of  6 variables:
+##  $ elevation   : num  414 414 414 414 414 ...
+##  $ timestamp   : POSIXct, format: &quot;2024-04-06 07:33:54&quot; &quot;2024-04-06 07:33:59&quot; ...
+##  $ ActivityName: chr  &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; &quot;Lauf am Morgen&quot; ...
+##  $ ActivityType: chr  &quot;running&quot; &quot;running&quot; &quot;running&quot; &quot;running&quot; ...
+##  $ rec_id      : chr  &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; &quot;11116616348.gpx&quot; ...
+##  $ geometry    :sfc_POINT of length 12517; first list element:  'XY' num  2681545 1248050
+##  - attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##  - attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA NA NA NA NA
+##   ..- attr(*, &quot;names&quot;)= chr [1:5] &quot;elevation&quot; &quot;timestamp&quot; &quot;ActivityName&quot; &quot;ActivityType&quot; ...
+</code></pre>
+<pre><code class="language-r"># Check Timezone
+attr(all_tracks$timestamp, &quot;tzone&quot;)
+</code></pre>
+<pre><code>## [1] &quot;UTC&quot;
+</code></pre>
+<pre><code class="language-r">#  Filtering out old data
+all_tracks &lt;- all_tracks |&gt; 
+  mutate(&quot;year&quot; = year(timestamp)) |&gt; #for this use library lubridate
+  filter(year == 2024)
+
+#Specify trajectory IDs
+#To differentiate between the different records, we assign an ID. 
+#This is also to ensure that if there were tracks with the same name, their fixes are not combined. 
+## Create function
+rle_id &lt;- function(vec) {
+  x &lt;- rle(vec)$lengths
+  as.factor(rep(seq_along(x), times = x))
+}
+## Apply function to run along record_names
+all_tracks &lt;- all_tracks |&gt;
+  mutate(trajID = rle_id(rec_id))
+summary(all_tracks)
+</code></pre>
+<pre><code>##    elevation       timestamp                      ActivityName      
+##  Min.   :398.7   Min.   :2024-04-06 07:33:54.00   Length:12517      
+##  1st Qu.:400.1   1st Qu.:2024-04-06 08:26:22.00   Class :character  
+##  Median :404.6   Median :2024-05-17 11:58:51.00   Mode  :character  
+##  Mean   :452.7   Mean   :2024-05-05 23:17:50.85                     
+##  3rd Qu.:559.3   3rd Qu.:2024-05-20 13:48:08.00                     
+##  Max.   :645.3   Max.   :2024-05-20 14:40:29.00                     
+##  ActivityType          rec_id                   geometry          year     
+##  Length:12517       Length:12517       POINT        :12517   Min.   :2024  
+##  Class :character   Class :character   epsg:2056    :    0   1st Qu.:2024  
+##  Mode  :character   Mode  :character   +proj=some...:    0   Median :2024  
+##                                                              Mean   :2024  
+##                                                              3rd Qu.:2024  
+##                                                              Max.   :2024  
+##  trajID  
+##  1:3873  
+##  2:3734  
+##  3:4910  
+##          
+##          
+## 
+</code></pre>
+<pre><code class="language-r"># choose exemplary trajectories (of mixed movement)  (or not, if we already did in before step)
+trajIDs &lt;- c(1 , 2, 3) #now, we just have the tracks that interest us, therefore we just select all.
+
+selected_tracks &lt;- all_tracks |&gt; 
+  filter(trajID %in% trajIDs)
+
+
+#### calculation of parameters ####
+
+# Distanz Funktion
+distance_by_element &lt;- function(later, now) {
+  as.numeric(
+    st_distance(later, now, by_element = TRUE)
+  )
+}
+# Movement Parameter
+selected_tracks &lt;- selected_tracks |&gt; 
+  group_by(trajID) |&gt;  # Gruppieren nach trajID
+  mutate(
+    distance = distance_by_element(geometry, lead(geometry, 1)), # distance to pos +1
+    time_diff = as.numeric(timestamp - lag(timestamp)),
+    speed = distance / time_diff,
+    speed_kmh = speed * 3.6, # round ist hier vllt sinnvoll? round(speed*3.6)
+    acceleration = (speed - lag(speed)) / time_diff,
+    # aus dem package slider, berechnet die gleitende Summe der Werte über 10 Punkte
+    avg_speed_10s = slide_dbl(speed_kmh, mean, .before = 5, .after = 5, .complete = TRUE),
+    avg_speed_60s = slide_dbl(speed_kmh, mean, .before = 30, .after = 30, .complete = TRUE), 
+    # aufpassen! Hier gehen die ersten 60 Datenpunkte verloren!
+    max_speed_10s = slide_dbl(speed_kmh, max, .before = 5, .after = 5, .complete = TRUE),
+    avg_acc_10s = slide_dbl(acceleration, mean, .before = 5, .after = 5, .complete = TRUE) ,
+    avg_acc_60s = slide_dbl(acceleration, mean, .before = 30, .after = 30, .complete = TRUE),
+    max_acc_10s = slide_dbl(acceleration, max, .before = 5, .after = 5, .complete = TRUE),
+    el_change = (elevation -lag(elevation,  10)), #given in meters/10 datapooints, not sure if correct or makes sense!
+    d_direct10 = distance_by_element(lag(geometry,4), lead(geometry,5)),
+    d_sinu10 = rollsum(distance, 10,align = &quot;center&quot;, fill = NA), # function rollsum does basically the same as slide, was recommended by nils
+    #Bei der Verwendung der rollsum-Funktion mit Fenstergröße von 10, werden die Datenpunkte so zentriert, dass die Summe der 5 Punkte vor und der 4 Punkte nach dem aktuellen Punkt berechnet wird.
+    d_direct10 = case_when(d_direct10 == 0 ~ d_sinu10,
+                           TRUE ~ d_direct10),
+    #diese Abänderung von d_direct ist nötig, damit die sinuosity richtig berechnet wird und keine Inf Values herauskommen (wegen Nenner=0)
+    sinuosity = d_sinu10/d_direct10   ) |&gt; 
+  ungroup()
+
+
+
+#### k-means Analysis #### 
+
+# again data prep &amp; Partitioning 
+
+selected_tracks_na_omit &lt;- na.omit(selected_tracks)
+# without direct &amp; dsinu
+km_no_sinu_geom &lt;- selected_tracks_na_omit |&gt; 
+  dplyr::select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change)
+
+km_no_sinu&lt;- km_no_sinu_geom |&gt; 
+  st_drop_geometry()
+
+# add. rm elevation change
+km_all_geom &lt;- selected_tracks_na_omit |&gt; 
+  select(distance, time_diff, speed, acceleration, avg_speed_10s, avg_speed_60s, avg_acc_10s, avg_acc_60s, el_change, d_direct10, d_sinu10,  sinuosity) |&gt; 
+  na.omit() 
+
+km_all &lt;- km_all_geom |&gt; 
+  st_drop_geometry()
+#  Important, first NA omit, then  drop geometry, damit später wieder zusammenführbar!geometry column has to go away, otherwise fviz not work
+
+km_all_scaled &lt;- km_all %&gt;%
+  scale()
+
+
+# Find the right amount of clusters
+plot_k_elbow &lt;- fviz_nbclust(km_all_scaled, kmeans, method = &quot;wss&quot;) #takes 3 mins to calculate, gives 5 clusters
+
+plot_k_elbow &lt;- fviz_nbclust(km_all_scaled, kmeans, method = &quot;wss&quot;) #takes 3 mins to calculate, gives 5 clusters
+#interesting: the &quot;elbow&quot;/knick, which indicates the appropriate k value, changes when we add sinuosity parameter from 5 to 4. So we try k means with both k values!
+
+#
+KM.cascade &lt;- cascadeKM(km_all_scaled,  inf.gr = 2, sup.gr = 5, iter = 100, criterion = &quot;ssi&quot;)
+summary(KM.cascade)
+</code></pre>
+<pre><code>##           Length Class  Mode     
+## partition 35448  -none- numeric  
+## results       8  -none- numeric  
+## criterion     1  -none- character
+## size         20  -none- numeric
+</code></pre>
+<pre><code class="language-r">cascade_results &lt;- KM.cascade$results #SSI 
+cascade_results 
+</code></pre>
+<pre><code>##         2 groups     3 groups     4 groups     5 groups
+## SSE 7.367210e+04 6.213183e+04 5.636069e+04 4.932676e+04
+## ssi 4.769605e-01 5.878517e-01 6.902157e-01 3.564035e-01
+</code></pre>
+<pre><code class="language-r">#KM.cascade$partition
+
+set.seed(1)
+
+#apply k means 
+km_4 &lt;- kmeans(km_all_scaled, 4)
+km_5 &lt;- kmeans(km_all_scaled, 5)
+#why dont we define n-start? it is auto defined anyway, therefore. 
+# nstart: The number of initial configurations. Because it’s possible that different initial starting clusters can lead to different results, it’s recommended to use several different initial configurations. The k-means algorithm will find the initial configurations that lead to the smallest within-cluster variation. 
+
+km_all_geom&lt;- cbind(km_all_geom, kmeans4 = km_4$cluster) 
+km_all_geom&lt;- cbind(km_all_geom, kmeans5 = km_5$cluster) 
+
+
+#### h means analysis ####
+hm_all_scaled &lt;- km_all %&gt;%
+  scale()
+
+# Compute the distance matrix
+dist_matrix &lt;- dist(hm_all_scaled)
+#dist_matrix
+
+# Perform hierarchical clustering of different type
+set.seed(1)
+
+hc_single &lt;- hclust(dist_matrix, method = &quot;single&quot;)
+hc_ward &lt;- hclust(dist_matrix, method = &quot;ward.D&quot;)
+hc_complete &lt;- hclust(dist_matrix, method = &quot;complete&quot;)
+
+# Cut the tree into a desired number of clusters (e.g., 4 clusters)
+clust_ward_4 &lt;- cutree(hc_ward, k = 4)
+clust_single_4 &lt;- cutree(hc_single, k = 4)
+clust_complete_4 &lt;- cutree(hc_complete, k = 4)
+
+# Add the clusters to the original data frame
+km_all_geom$c_ward_4&lt;- as.factor(clust_ward_4)
+km_all_geom$c_single_4&lt;- as.factor(clust_single_4)
+km_all_geom$c_compl_4&lt;- as.factor(clust_complete_4)
+
+# Distribution of points among clusters
+summary(km_all_geom$c_ward_4)
+</code></pre>
+<pre><code>##    1    2    3    4 
+## 1292 4037  723 2810
+</code></pre>
+<pre><code class="language-r">summary(km_all_geom$c_single_4)
+</code></pre>
+<pre><code>##    1    2    3    4 
+## 8858    2    1    1
+</code></pre>
+<pre><code class="language-r">summary(km_all_geom$c_compl_4)
+</code></pre>
+<pre><code>##    1    2    3    4 
+## 8841   13    7    1
+</code></pre>
+<pre><code class="language-r"># Track split into 5 clusters... 
+ward_plot &lt;- plot(clust_ward_4, main = &quot;Ward&quot;)
+</code></pre>
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-13" /></p>
+<pre><code class="language-r"># Dendrogramm of cluster result
+ward_dendro &lt;- plot(hc_ward, main = &quot;Ward&quot;) # hat komischen schwarzen Balken unten (labels??)
+</code></pre>
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-13" /></p>
+<pre><code class="language-r"># plot results
+P_ward_4&lt;- km_all_geom |&gt; 
+  tm_shape() +
+  tm_dots(size = 0.05, col = &quot;c_ward_4&quot;) 
+# fast to compute, good differentiation
+
+
+#### Verification #####
+
+##### ANOVA #####
+
+
+##### t test #####
+
+
+#### Other functions #####
+
+# Function hcoplot(): (from Research Methods)
+# Reorder and plot dendrogram with colors for groups and legend
+# Usage: hcoplot(tree = hclust.object, diss = dissimilarity.matrix, k = nb.clusters, 
+#	title = paste(&quot;Reordered dendrogram from&quot;,deparse(tree$call),sep=&quot;\n&quot;))
+# License: GPL-2 
+# Author: Francois Gillet, 23 August 2012
+# Revised: Daniel Borcard, 31 August 2017
+
+&quot;hcoplot&quot; &lt;- function(tree, 
+                      diss, 
+                      lab = NULL,
+                      k, 
+                      title = paste(&quot;Reordered dendrogram from&quot;, 
+                                    deparse(tree$call), 
+                                    sep=&quot;\n&quot;))
+{
+  require(gclus)
+  gr &lt;- cutree(tree, k=k)
+  tor &lt;- reorder.hclust(tree, diss)
+  plot(tor, 
+       labels = lab,
+       hang=-1, 
+       xlab=paste(length(gr),&quot;sites&quot;), 
+       sub=paste(k,&quot;clusters&quot;), 
+       main=title)
+  so &lt;- gr[tor$order]
+  gro &lt;- numeric(k)
+  for (i in 1 : k)
+  {
+    gro[i] &lt;- so[1]
+    if (i&lt;k) so &lt;- so[so!=gro[i]]
+  }
+  rect.hclust(tor, 
+              k = k, 
+              border = gro + 1, 
+              cluster = gr)
+  legend(&quot;topright&quot;, 
+         paste(&quot;Cluster&quot;, 1 :k ), 
+         pch = 22, 
+         col = 2 : (k + 1), 
+         bty = &quot;n&quot;)
+}
+</code></pre>
+</div>
+<div class="include-after">
+</div>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+</body>
+</html>
