@@ -1,5 +1,5 @@
 ---
-title: A Travel Mode Detection approach based on hierarchical and non hierarchical clustering
+title: A Travel Mode Detection approach based on hierarchical and non-hierarchical clustering
 subtitle: Patterns and Trends in Environmental Data
 author: Lucia Scheele and Laura Vetter
 format:
@@ -35,25 +35,14 @@ osm_bg <- get_tiles(bbox, provider = "OpenStreetMap", zoom = 16)
 
 ## Abstract
 
-This project aims to analyze travel behaviour and clustering of travel
+This project aims to analyze travel behavior and clustering of travel
 segments by different clustering methods and visual analysis. Parameters
 like speed, acceleration, elevation and sinuosity and derived parameters
 were used for clustering with kmeans and hclust. Additionally, a
 segmentation by threshold (using the parameter speed) and a manual
-segmentation using GIS were carried out to compare them to the
-clustering. Verification took place using Chi square test. It was found
-that ¨
-
-the amount of clusters - 5 clusters, which corresponds to the actual
-amount of travel modes (+standing) - hclust predicts better than
-kmeans - the ward method in hclust is better than single and - xxx
-showed a better (or equally good) result than manual classification. -
-Verification method - ... BEARBEITEN
-
-TO CONSIDER: Interactive maps are only reasonable for small amounts of
-data (e.g. a few locations of a single wild boar). If you want to show a
-large amount of data, consider making a static map instead (using
-tmap_mode("plot")).
+segmentation using GIS were carried out to compare their results to the
+clustering. Verification took place using the Chi-square test. It was found
+that for the partinoning (choosing the amount of k), only one of the statistical tests coincided with the actual number of  movement types (k=5). Furthermore, the results suggest that hclust provides a clustering that matches the ground truth better than k-means. Specifically, the ward method in hclust performs better than the single and complete method. It was not proven, that clustering shows a better (or equally good) result than manual classification in GIS. This is mainly due to a lack of differentiation between bike and tram movement, as well as a mis-classification of movement in turns (e.g. bike was classified as walking)
 
 ## Introduction
 
@@ -435,7 +424,7 @@ tmap_arrange(cluster_h5_ward)
 
 ```
 
-
+The visual inspection of this track is already giving a good impression of how the fix point data is split into segments. Though there is a lack of continuity, as longer stretches of the same color are interrupted by single fixes of a different color. Generally the clustering works well with differentiation between running and walking, but bike and tram appear to be within the same cluster. This is likely due to similar parameter characteristics from the parameters used for the clustering. It would thus be necessary, to find a parameter, which would allow the clustering method to differentiate between a bike and tram ride.
 
 ### Verification with chi square test
 
@@ -530,41 +519,14 @@ cluster_GIS_map
 -   Differentiation between bike&tram was not possible.
 
 ## Discussion
-
-chaining
-
-The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important
-factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect. 
-
-
-. It was observed that clustering with single tracks
-works better than clustering with all tracks. 
-Therefore, the applicability of this method is questionable/not suitable for bigger
-datasets or datasets with different movement patterns. Furthermore, it
-needs to be mentioned that for the validation with GIS, the speed
-information was used as a control. Therefore, independent control of
-cluster quality cannot be guaranteed.
-
-- stationäre punkte mitgeclustert
- - spatial proximity of the data: This might have led to a disadvantage for clustering? 
-
+The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods fail to differentiate between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect. In an earlier stage of this project, it was observed, that hclust generated a more accurate differentiation when only looking at the data of one track (results of this are not included/got lost on the way). This leads to the assumption, that the movement type information gets more obscure with the information of several tracks, causing a greater heterogeneity within one movement type and potentially more overlap among different movement types. This raises the question, if this method is suitable for bigger sets of data or sets with different movement patterns. Considering the included data, it should also be mentioned, that the stationary phases were not removed from the movement data. It would be interesting to see, if removing them could help with the accuracy of the clustering methods. Furthermore, it is to mention, that the validation with GIS used the speed information from the parameters that were also used within the clustering. It is not clear, in how far this might cause a dependency between the ground-truth from GIS and the cluster results.
+Lastly, it is not clear how the dependency of spatial data influences the clustering procedure. This could be further investigated with a more thorough literature analysis on the method, but this was not in the scope of our project.  
 
 ### Further Research
+Apart from the suggested investigation that are mentioned in the discussion above, the following points could be of interest: 
 
--   At first, the turning angle was considered as an alternative
-    parameter to mitigate the inaccuracies that occured when the bike
-    slowed down in curves, however there was no time left to include
-    this in the analysis and will therefore be left for another project.
--   Another interesting investigation would have been the possibility to
-    extract the parameters by which the clusters were formed (how big of
-    a weight had, e.g. the speed in comparison to the average
-    acceleration). If this were possible, the weights could be adjusted
-    to balance certain inaccuracies as well.
--   Further clustering, such as kmodes, which also allows
-    ordinal/categorical variables to be considered, would have been of
-    interest, as infrastructural data could have been included.
-
-
+The turning angle was considered as an alternative parameter to mitigate the inaccuracies that occured when the bike slowed down in curves, however there was no time left to include this in the analysis and will therefore be left for another project. Another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g. the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well. Further clustering, such as kmodes, which also allows to consider ordinal/categorical variables, would have been of interest, as infrastructural data could have been included.
+Finally, it could be tested, in how far smoothing out the inconsistencies within segments of one movement type would improve the validation method. 
 
 ## Appendix
 
