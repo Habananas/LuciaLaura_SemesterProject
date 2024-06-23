@@ -11,6 +11,8 @@ library(dplyr)
 library("gitcreds")
 library(XML) #to read the XML data of gpx files
 library(tmap) #to show data in map viewer
+#install.packages("maptiles")
+library(maptiles) # for tmap(plot)
 #library(leaflet) #alternative to show in a map
 library(lubridate) # time
 library(knitr) #To “prove” that script runs on your machine from top to bottom
@@ -25,7 +27,6 @@ library(zoo) # for sinuosity
 library(vegan) # for k means partitioning
 #install.packages("gridExtra")
 library("gridExtra") #for displaying several plots at the time with grid.arrange()
-
 
 
 
@@ -180,7 +181,7 @@ selected_tracks_na_omit  <- selected_tracks_na_omit  |>
     ) 
 
 
-##### LEAVE OUT transformation of unevenness in the manual clustering  #####
+##### LEAVE OUT transformation of unevenness in the manual clustering (like rID segmentation) #####
 
 "selected_tracks_na_omit <- selected_tracks_na_omit  |> 
   mutate(
@@ -322,7 +323,14 @@ P_ward_4<- selected_tracks_na_omit |>
 
 #### Output Maps ####
 
-tmap_mode("view")
+tmap_mode("plot")
+
+
+trackID_map <- tm_shape(osm_bg) +
+  tm_rgb(alpha = 0.4)+
+  tm_shape(selected_tracks_na_omit) + 
+  tm_dots(col = "trajID", palette = "Paired", alpha = 1)
+
 
 speed_map <- tm_shape(selected_tracks_na_omit)+
   tm_dots(col = "speed_kmh", palette = "-RdYlGn") + #das minus vor der Palette invertiert den normalen Farbverlauf
@@ -344,7 +352,9 @@ cluster_GIS_map <- tm_shape(selected_tracks_na_omit)+
   tm_view(set.view = c(8.520515, 47.388322,  16))
 
 # k means maps
-cluster_k5_map <- tm_shape(selected_tracks_na_omit)+ 
+cluster_k5_map <- tm_shape(osm_bg) +
+  tm_rgb(alpha = 0.4)+
+  tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "kmeans5", palette = "Paired")
 
 selected_tracks_na_omit <- selected_tracks_na_omit |> 
@@ -385,6 +395,7 @@ selected_tracks_na_omit <- selected_tracks_na_omit |>
   ))
 cluster_h5_names_map <- tm_shape(selected_tracks_na_omit)+ 
   tm_dots(col = "hward_names", palette = "Paired")
+tmap_arrange(cluster_k5names_map, cluster_h5_names_map, cluster_GIS_map)
 
 
 #### Verification #####
