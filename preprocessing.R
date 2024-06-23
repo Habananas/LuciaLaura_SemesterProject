@@ -329,6 +329,7 @@ P_ward_5<- selected_tracks_na_omit |>
 
 tmap_mode("plot")
 
+save(trackID_map,file="trackID_map.rda") 
 
 trackID_map <- tm_shape(osm_bg) +
   tm_rgb(alpha = 0.4)+

@@ -150,10 +150,6 @@ div.csl-indent {
 
 |---------|---------|---------|---------|
 =========================================
-                                          
-
-|---------|---------|---------|---------|
-=========================================
                                           </code></pre>
 </div>
 </div>
@@ -270,7 +266,7 @@ In another step, the individual cluster groups were inspected visually and stati
 </section>
 <section id="clustering-with-kmeans" class="level3">
 <h3 class="anchored" data-anchor-id="clustering-with-kmeans">Clustering with kmeans</h3>
-<p>K means is one of the most commonly used partition based algorithms (<span class="citation" data-cites="yuan2017review">Yuan et al. (<a href="#ref-yuan2017review" role="doc-biblioref">2017</a>)</span>), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster. First, partitioning (determining the appropriate number of k) is carried out using the elbow method from the package factoextra (<span class="citation" data-cites="ElbowMethod">(<a href="#ref-ElbowMethod" role="doc-biblioref"><strong>ElbowMethod?</strong></a>)</span>) and the cascade method from the package vegan.<br>
+<p>K means is one of the most commonly used partition based algorithms (<span class="citation" data-cites="yuan2017review">Yuan et al. (<a href="#ref-yuan2017review" role="doc-biblioref">2017</a>)</span>), where k defines the number of clusters and is identified before processing. Each partition is one cluster and contains at least one data point, where each data point is assigned to only one cluster. First, partitioning (determining the appropriate number of k) is carried out using the elbow method from the package factoextra (<span class="citation" data-cites="ElbowMethod"><span>“Determining-the-Optimal-Number-of-Clusters-3-Must-Know-Methods”</span></span>) and the cascade method from the package vegan.<br>
 All parameters included in the clustering analysis are numerical:</p>
 <div class="cell">
 <details>
@@ -561,7 +557,12 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 </section>
 <section id="discussion" class="level2">
 <h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
-<p>We could statistically prove that the hmean clustering method could better predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect (this was left out of the report). It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. Furthermore, it needs to be mentioned that for the validation with GIS, the speed information was used as a control. Therefore, independent control of cluster quality cannot be guaranteed.</p>
+<p>The Chi Square results suggest that the hclust method is more appropriate to predict transport modes than the kmeans clustering. However, when analyzing visually, both methods do not take into account important factors such as the differentiation between tram and biking. The parameter sinuosity, which was initially thought to help distinguish between the two classes, did not seem to have an effect.</p>
+<p>. It was observed that clustering with single tracks works better than clustering with all tracks. Therefore, the applicability of this method is questionable/not suitable for bigger datasets or datasets with different movement patterns. Furthermore, it needs to be mentioned that for the validation with GIS, the speed information was used as a control. Therefore, independent control of cluster quality cannot be guaranteed.</p>
+<ul>
+<li>stationäre punkte mitgeclustert</li>
+<li>spatial proximity of the data: This might have led to a disadvantage for clustering?</li>
+</ul>
 <section id="further-research" class="level3">
 <h3 class="anchored" data-anchor-id="further-research">Further Research</h3>
 <ul>
@@ -569,7 +570,6 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <li>Another interesting investigation would have been the possibility to extract the parameters by which the clusters were formed (how big of a weight had, e.g.&nbsp;the speed in comparison to the average acceleration). If this were possible, the weights could be adjusted to balance certain inaccuracies as well.</li>
 <li>Further clustering, such as kmodes, which also allows ordinal/categorical variables to be considered, would have been of interest, as infrastructural data could have been included.</li>
 </ul>
-<p>UNFINISHED, to be included in discussion: - spatial proximity of the data: This might have led to a disadvantage for clustering? (Lucia) - scale/normalisation. Warum normalisieren wir dieWerte? Gibt es Nachteile bei einer Normalisierung(look up dengler?)?</p>
 </section>
 </section>
 <section id="appendix" class="level2">
@@ -587,7 +587,7 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 <span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>wordcountaddin<span class="sc">::</span><span class="fu">word_count</span>(<span class="st">"index.qmd"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2520</code></pre>
+<pre><code>[1] 2496</code></pre>
 </div>
 <details>
 <summary>Code</summary>
@@ -599,6 +599,11 @@ hmeans_kmeans           13777.363    16       0</code></pre>
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-ElbowMethod" class="csl-entry" role="listitem">
+<span>“Determining-the-Optimal-Number-of-Clusters-3-Must-Know-Methods.”</span> <a href="
+https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method" class="uri">
+https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/#elbow-method</a>.
+</div>
 <div id="ref-rdocumentationHclustFunction" class="csl-entry" role="listitem">
 <span>“Hclust Function - <span>R</span><span>D</span>ocumentation — Rdocumentation.org.”</span> <a href="https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust" class="uri">https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/hclust</a>.
 </div>
